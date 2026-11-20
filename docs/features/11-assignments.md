@@ -32,7 +32,7 @@ Số hoá việc giao bài về nhà của giáo viên tiểu học: giao một 
 
 - Command: `CreateAssignmentCommand`, `UpdateAssignmentCommand`, `DeleteAssignmentCommand`.
 - Query: `ListClassAssignmentsQuery`, `GetAssignmentDetailQuery`, `MyAssignmentsQuery`, `MyRemindersQuery`; dùng qua QueryBus bởi module khác: `AssignedQuizIdsQuery` (quyền xem quiz), `AssignmentPlayAccessQuery` (mở phiên).
-- Event: `AssignmentCreatedEvent` (ghi log, chỗ móc thông báo ở giai đoạn 4); lắng nghe `StudentsJoinedClassEvent` (thêm em mới vào bài **cả lớp** còn hạn) và `StudentLeftClassEvent` (gỡ em khỏi mọi bài của lớp).
+- Event: `AssignmentCreatedEvent` (ghi log, chỗ móc thông báo ở giai đoạn 4). Command do module lớp gọi và `await`: `AddJoinersToAssignmentsCommand` (thêm em mới vào bài **cả lớp** còn hạn) và `RemoveLeaverFromAssignmentsCommand` (gỡ em khỏi mọi bài của lớp).
 - Collection `assignments`: `classId`, `quizId`, `teacherId`, `target { kind, groupId?, groupName? }`, `studentIds` (chốt lúc giao), `dueDate`, `status: active|closed`, `note?`. Index `{classId, dueDate}`, `{studentIds, dueDate}`, `{quizId}`.
 - `student_progress.assignmentId` + index `{assignmentId, studentId, completedAt}`; `quiz_sessions` unique `{studentId, quizId, assignmentId}`.
 - Quy tắc trạng thái (`assignment-status.ts`, hàm thuần có unit test):

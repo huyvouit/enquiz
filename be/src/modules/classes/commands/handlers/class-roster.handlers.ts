@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  CommandBus,
   CommandHandler,
-  EventBus,
   ICommandHandler,
   QueryBus,
 } from '@nestjs/cqrs';
@@ -19,6 +19,10 @@ import {
   BCRYPT_ROUNDS,
   kidPassword,
 } from '../../../../common/utils/passwords.js';
+import {
+  AddJoinersToAssignmentsCommand,
+  RemoveLeaverFromAssignmentsCommand,
+} from '../../../assignments/commands/impl/class-membership.commands.js';
 import { User } from '../../../users/schemas/user.schema.js';
 import { loadManagedClass } from '../../class-access.js';
 import {
@@ -31,10 +35,6 @@ import {
   CreatedStudent,
   StudentClassView,
 } from '../../classes.mapper.js';
-import {
-  StudentLeftClassEvent,
-  StudentsJoinedClassEvent,
-} from '../../events/impl/class-membership.events.js';
 import { GetClassDetailQuery } from '../../queries/impl/class-views.queries.js';
 import {
   CLASS_MAX_STUDENTS,
@@ -54,7 +54,7 @@ export class JoinClassHandler implements ICommandHandler<JoinClassCommand> {
   constructor(
     @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
-    private readonly eventBus: EventBus,
+    private readonly commandBus: CommandBus,
   ) {}
 
   async execute({ code, user }: JoinClassCommand): Promise<StudentClassView> {
@@ -79,8 +79,8 @@ export class JoinClassHandler implements ICommandHandler<JoinClassCommand> {
         { $addToSet: { studentIds: me } },
       );
       if (res.matchedCount === 0) throw new ConflictException(CLASS_FULL);
-      this.eventBus.publish(
-        new StudentsJoinedClassEvent(c._id.toString(), [user.userId]),
+      await this.commandBus.execute(
+        new AddJoinersToAssignmentsCommand(c._id.toString(), [user.userId]),
       );
     }
 
@@ -102,7 +102,7 @@ export class BulkCreateStudentsHandler implements ICommandHandler<BulkCreateStud
     @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly queryBus: QueryBus,
-    private readonly eventBus: EventBus,
+    private readonly commandBus: CommandBus,
   ) {}
 
   async execute({
@@ -164,8 +164,8 @@ export class BulkCreateStudentsHandler implements ICommandHandler<BulkCreateStud
       { _id: c._id },
       { $addToSet: { studentIds: { $each: ids } } },
     );
-    this.eventBus.publish(
-      new StudentsJoinedClassEvent(classId, ids.map(String)),
+    await this.commandBus.execute(
+      new AddJoinersToAssignmentsCommand(classId, ids.map(String)),
     );
 
     return {
@@ -181,7 +181,7 @@ export class BulkCreateStudentsHandler implements ICommandHandler<BulkCreateStud
 export class RemoveStudentHandler implements ICommandHandler<RemoveStudentCommand> {
   constructor(
     @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
-    private readonly eventBus: EventBus,
+    private readonly commandBus: CommandBus,
   ) {}
 
   async execute({
@@ -198,6 +198,8 @@ export class RemoveStudentHandler implements ICommandHandler<RemoveStudentComman
       { _id: c._id },
       { $pull: { studentIds: sid, 'groups.$[].studentIds': sid } },
     );
-    this.eventBus.publish(new StudentLeftClassEvent(classId, studentId));
+    await this.commandBus.execute(
+      new RemoveLeaverFromAssignmentsCommand(classId, studentId),
+    );
   }
 }

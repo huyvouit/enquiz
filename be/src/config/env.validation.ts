@@ -10,8 +10,15 @@ export interface AppEnv {
   JWT_EXPIRES_IN: string;
   CORS_ORIGIN: string;
   SEED_DEMO_DATA: boolean;
-  /** Login/register attempts allowed per IP per minute. */
+  /** Login/register attempts allowed per username per minute. */
   AUTH_RATE_LIMIT: number;
+  /** Login/register requests allowed per IP per minute (a school shares one IP). */
+  AUTH_IP_RATE_LIMIT: number;
+  /**
+   * Number of reverse proxies in front of the app (Express `trust proxy`), so
+   * `req.ip` is the real client. 0 = connected directly (local dev).
+   */
+  TRUST_PROXY: number;
   /** Where uploaded question images go: `local` disk or an S3-compatible bucket. */
   STORAGE_DRIVER: 'local' | 's3';
   /** Local driver: folder for uploads (relative to the working directory). */
@@ -41,6 +48,8 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     CORS_ORIGIN: str('CORS_ORIGIN', 'http://localhost:5173'),
     SEED_DEMO_DATA: str('SEED_DEMO_DATA', 'false') === 'true',
     AUTH_RATE_LIMIT: Number(str('AUTH_RATE_LIMIT', '10')),
+    AUTH_IP_RATE_LIMIT: Number(str('AUTH_IP_RATE_LIMIT', '100')),
+    TRUST_PROXY: Number(str('TRUST_PROXY', '0')),
     STORAGE_DRIVER: str('STORAGE_DRIVER', 'local') as AppEnv['STORAGE_DRIVER'],
     UPLOAD_DIR: str('UPLOAD_DIR', 'uploads'),
     S3_BUCKET: str('S3_BUCKET', ''),
@@ -58,8 +67,13 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
       'S3_BUCKET and S3_PUBLIC_URL are required when STORAGE_DRIVER=s3',
     );
   }
-  if (!Number.isInteger(env.AUTH_RATE_LIMIT) || env.AUTH_RATE_LIMIT < 1) {
-    errors.push('AUTH_RATE_LIMIT must be a positive integer');
+  for (const key of ['AUTH_RATE_LIMIT', 'AUTH_IP_RATE_LIMIT'] as const) {
+    if (!Number.isInteger(env[key]) || env[key] < 1) {
+      errors.push(`${key} must be a positive integer`);
+    }
+  }
+  if (!Number.isInteger(env.TRUST_PROXY) || env.TRUST_PROXY < 0) {
+    errors.push('TRUST_PROXY must be 0 or a positive integer');
   }
   if (env.JWT_SECRET && env.JWT_SECRET.length < 16) {
     errors.push('JWT_SECRET must be at least 16 characters');

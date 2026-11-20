@@ -16,6 +16,8 @@ WORKDIR /app
 
 # mongodb-memory-server (dev/test only) downloads a MongoDB binary on install.
 ENV MONGOMS_DISABLE_POSTINSTALL=1
+# The project requires npm >= 11 (see README); node:22 ships npm 10.
+RUN npm install -g npm@11 --no-audit --no-fund
 
 COPY package.json package-lock.json ./
 RUN npm ci

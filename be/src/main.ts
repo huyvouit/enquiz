@@ -1,12 +1,18 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module.js';
 import { API_PREFIX, setupApp } from './common/setup-app.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+
+  // Behind Firebase Hosting + Cloud Run, req.ip (used by the rate limits) is
+  // only the real client when Express trusts exactly that many proxies.
+  const proxies = config.getOrThrow<number>('TRUST_PROXY');
+  if (proxies > 0) app.set('trust proxy', proxies);
 
   // Question images are public and may be shown by a frontend on another origin.
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));

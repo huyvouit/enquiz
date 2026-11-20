@@ -14,9 +14,9 @@ import {
 } from './commands/handlers/assignment.handlers.js';
 import {
   AddJoinersToAssignmentsHandler,
-  AssignmentCreatedLogHandler,
   RemoveLeaverFromAssignmentsHandler,
-} from './events/assignment.events.js';
+} from './commands/handlers/class-membership.handlers.js';
+import { AssignmentCreatedLogHandler } from './events/assignment.events.js';
 import {
   AssignedQuizIdsHandler,
   AssignmentPlayAccessHandler,
@@ -52,6 +52,8 @@ import { Assignment, AssignmentSchema } from './schemas/assignment.schema.js';
     CreateAssignmentHandler,
     UpdateAssignmentHandler,
     DeleteAssignmentHandler,
+    AddJoinersToAssignmentsHandler,
+    RemoveLeaverFromAssignmentsHandler,
     // Queries
     ListClassAssignmentsHandler,
     GetAssignmentDetailHandler,
@@ -61,8 +63,6 @@ import { Assignment, AssignmentSchema } from './schemas/assignment.schema.js';
     AssignmentPlayAccessHandler,
     // Events
     AssignmentCreatedLogHandler,
-    AddJoinersToAssignmentsHandler,
-    RemoveLeaverFromAssignmentsHandler,
   ],
   exports: [MongooseModule, AssignmentSubmissionsService],
 })

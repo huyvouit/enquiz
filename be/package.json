@@ -6,6 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=11"
+  },
   "scripts": {
     "build": "nest build",
     "deploy": "nest deploy",
@@ -22,6 +26,7 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "migrate:phase2": "node scripts/migrate-phase2.mjs",
     "seed:content": "nest build && node dist/cli/seed-content.js",
+    "create:admin": "nest build && node dist/cli/create-admin.js",
     "migrate:phase3": "node scripts/migrate-phase3.mjs"
   },
   "dependencies": {

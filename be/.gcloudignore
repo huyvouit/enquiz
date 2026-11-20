@@ -1,0 +1,12 @@
+# Files NOT uploaded by `gcloud builds submit` (it ignores .dockerignore).
+# Without this file gcloud would upload .env (secrets) and node_modules.
+.gcloudignore
+.git
+node_modules
+dist
+*.tsbuildinfo
+coverage
+.env
+.env.*
+!.env.example
+uploads

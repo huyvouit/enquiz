@@ -14,7 +14,7 @@ import { RegisterCommand } from './commands/impl/register.command.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 
-/** Rate limited per IP (AUTH_RATE_LIMIT requests/minute) against password guessing. */
+/** Rate limited per username and per IP against password guessing (see auth-throttle.ts). */
 @Public()
 @UseGuards(ThrottlerGuard)
 @Controller('auth')

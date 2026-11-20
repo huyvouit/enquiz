@@ -13,6 +13,7 @@ process.env.MONGODB_URI = 'memory';
 process.env.JWT_SECRET = 'e2e-test-secret-at-least-16-chars';
 process.env.SEED_DEMO_DATA = 'true';
 process.env.AUTH_RATE_LIMIT = '1000';
+process.env.AUTH_IP_RATE_LIMIT = '1000';
 // Uploads go to a throwaway folder, never into the repository.
 process.env.UPLOAD_DIR = `${tmpdir()}/enquiz-e2e-${process.pid}`;
 

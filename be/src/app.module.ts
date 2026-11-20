@@ -11,6 +11,7 @@ import { SeedModule } from './database/seed/seed.module.js';
 import { HealthController } from './health.controller.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { AssignmentsModule } from './modules/assignments/assignments.module.js';
+import { authThrottlers } from './modules/auth/auth-throttle.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { ClassesModule } from './modules/classes/classes.module.js';
 import { ProgressModule } from './modules/progress/progress.module.js';
@@ -28,9 +29,10 @@ import { UsersModule } from './modules/users/users.module.js';
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        throttlers: [
-          { ttl: 60_000, limit: config.getOrThrow<number>('AUTH_RATE_LIMIT') },
-        ],
+        throttlers: authThrottlers(
+          config.getOrThrow<number>('AUTH_RATE_LIMIT'),
+          config.getOrThrow<number>('AUTH_IP_RATE_LIMIT'),
+        ),
         errorMessage:
           'Bạn thử quá nhiều lần rồi. Vui lòng đợi một phút rồi thử lại nhé',
       }),
