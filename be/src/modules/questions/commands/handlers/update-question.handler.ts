@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { QuestionAudioService } from '../../../audio/question-audio.service.js';
 import { assertCanModify } from '../../../../common/utils/ownership.js';
 import { assertValidQuestionContent } from '../../question-content.validator.js';
 import { questionFieldsFromDto } from '../../question-fields.js';
@@ -13,6 +14,7 @@ import { UpdateQuestionCommand } from '../impl/update-question.command.js';
 export class UpdateQuestionHandler implements ICommandHandler<UpdateQuestionCommand> {
   constructor(
     @InjectModel(Question.name) private readonly questionModel: Model<Question>,
+    private readonly audio: QuestionAudioService,
   ) {}
 
   async execute({
@@ -25,8 +27,11 @@ export class UpdateQuestionHandler implements ICommandHandler<UpdateQuestionComm
     assertCanModify(user, existing.createdBy);
 
     const content = assertValidQuestionContent(dto);
+    const fields = questionFieldsFromDto(dto);
     existing.set({
-      ...questionFieldsFromDto(dto),
+      ...fields,
+      // Same text: the file already exists, so this only rebuilds the URL.
+      audioUrl: await this.audio.urlFor(fields.audioText),
       ...content,
     });
     await existing.save();

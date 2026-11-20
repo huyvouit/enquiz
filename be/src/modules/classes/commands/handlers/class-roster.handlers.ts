@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -98,6 +99,8 @@ export class JoinClassHandler implements ICommandHandler<JoinClassCommand> {
 
 @CommandHandler(BulkCreateStudentsCommand)
 export class BulkCreateStudentsHandler implements ICommandHandler<BulkCreateStudentsCommand> {
+  private readonly logger = new Logger(BulkCreateStudentsHandler.name);
+
   constructor(
     @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
@@ -160,13 +163,20 @@ export class BulkCreateStudentsHandler implements ICommandHandler<BulkCreateStud
       ),
     );
     const ids = docs.map((d) => d._id);
-    await this.classModel.updateOne(
-      { _id: c._id },
-      { $addToSet: { studentIds: { $each: ids } } },
-    );
-    await this.commandBus.execute(
-      new AddJoinersToAssignmentsCommand(classId, ids.map(String)),
-    );
+    try {
+      await this.classModel.updateOne(
+        { _id: c._id },
+        { $addToSet: { studentIds: { $each: ids } } },
+      );
+      await this.commandBus.execute(
+        new AddJoinersToAssignmentsCommand(classId, ids.map(String)),
+      );
+    } catch (err) {
+      // Plan D17: no transaction, so undo the accounts that were just created
+      // instead of leaving students who belong to no class.
+      await this.undoCreated(classId, ids);
+      throw err;
+    }
 
     return {
       class: await this.queryBus.execute(
@@ -174,6 +184,27 @@ export class BulkCreateStudentsHandler implements ICommandHandler<BulkCreateStud
       ),
       created: accounts.map((a, i) => ({ id: ids[i].toString(), ...a })),
     };
+  }
+
+  /** Best effort: a failure here is logged, the original error still wins. */
+  private async undoCreated(classId: string, ids: Types.ObjectId[]) {
+    try {
+      await this.classModel.updateOne(
+        { _id: new Types.ObjectId(classId) },
+        { $pull: { studentIds: { $in: ids } } },
+      );
+      for (const id of ids) {
+        await this.commandBus.execute(
+          new RemoveLeaverFromAssignmentsCommand(classId, id.toString()),
+        );
+      }
+      await this.userModel.deleteMany({ _id: { $in: ids } });
+    } catch (cleanupErr) {
+      this.logger.error(
+        `Could not undo ${ids.length} new students of class ${classId}`,
+        cleanupErr instanceof Error ? cleanupErr.stack : String(cleanupErr),
+      );
+    }
   }
 }
 

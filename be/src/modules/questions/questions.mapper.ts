@@ -17,6 +17,8 @@ export interface QuestionView {
   questionText: string;
   mediaUrl?: string;
   audioText?: string;
+  /** Missing while the text-to-speech audio is not made yet. */
+  audioUrl?: string;
   tags: string[];
   yleLevel?: YleLevel;
   unit?: string;
@@ -41,6 +43,7 @@ export function toQuestionView(
     questionText: q.questionText,
     mediaUrl: q.mediaUrl,
     audioText: q.audioText,
+    audioUrl: q.audioUrl,
     tags: q.tags ?? [],
     yleLevel: q.yleLevel,
     unit: q.unit,

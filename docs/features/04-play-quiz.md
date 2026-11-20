@@ -13,7 +13,7 @@ Học sinh trả lời từng câu (trắc nghiệm, nối từ, điền từ, s
    - **Nối từ**: chạm ô trái rồi ô phải; nối đủ thì bấm **Kiểm tra ✔**.
    - **Điền từ**: có từ gợi ý thì chạm một từ để đặt vào chỗ trống (chạm lại để bỏ); không có thì gõ vào ô chữ to → **Kiểm tra ✔**.
    - **Sắp xếp câu**: chạm các thẻ để xếp lên dòng câu (chạm thẻ đã xếp để trả về); xếp hết thì **Kiểm tra ✔**.
-   - Câu có ảnh: ảnh hiện to phía trên. Câu **nghe**: nút 🔊 tròn to, tự đọc một lần khi hiện câu (nếu đang bật âm thanh) và đọc lại mỗi lần chạm.
+   - Câu có ảnh: ảnh hiện to phía trên. Câu **nghe**: nút 🔊 tròn to phát file MP3 do server tạo (D16), tự phát một lần khi hiện câu (nếu đang bật âm thanh) và phát lại mỗi lần chạm. Câu nghe chưa có âm thanh (`audioPending`) hiện "Chưa nghe được câu này".
    - Server chấm → hiện xanh/đỏ, "ting-ting" hoặc "boop" nhẹ, đáp án đúng + 💡 giải thích. **Câu đã trả lời không đổi được.**
 4. **Câu tiếp theo →**. Thanh trên cùng: tiến độ, số câu đúng, chuỗi 🔥 khi đúng ≥ 3 câu liên tiếp. **← Xem lại** để xem lại câu trước (chỉ đọc).
 5. Câu cuối → **Xem kết quả 🏁** → `POST /progress/sessions/:id/finish` → màn kết quả (tài liệu [05](05-progress-results.md)).
@@ -32,7 +32,7 @@ Học sinh trả lời từng câu (trắc nghiệm, nối từ, điền từ, s
     { "id": "…", "type": "matching", "questionText": "Match…", "matching": { "lefts": ["🐶", "🐱"], "rights": ["cat", "dog"] } },
     { "id": "…", "type": "fill_in_blank", "questionText": "I have a ___.", "mediaUrl": "/api/v1/uploads/images/….png", "options": ["sun", "cat", "fish"] },
     { "id": "…", "type": "ordering", "questionText": "Sắp xếp thành câu đúng", "ordering": { "items": ["cat", "I", "my", "like"] } },
-    { "id": "…", "type": "multiple_choice", "questionText": "Nghe và chọn", "audioText": "a duck", "options": ["🐔", "🦆"] }
+    { "id": "…", "type": "multiple_choice", "questionText": "Nghe và chọn", "audioUrl": "/api/v1/uploads/audio/3f2a….mp3", "options": ["🐔", "🦆"] }
   ]
 }
 ```
@@ -66,7 +66,7 @@ Học sinh trả lời từng câu (trắc nghiệm, nối từ, điền từ, s
   - `components/StudentGame.tsx`: mở phiên, giữ `feedback` theo câu, gửi từng câu, nộp bài, làm mới profile (cấp/XP ở header).
   - `MultipleChoiceGame`, `MatchingGame`: nhận `correctAnswer` / `correctPairs` để tô xanh/đỏ sau khi chấm; được truyền làm `children` của `QuestionStage`.
   - `FillBlankGame`, `OrderingGame`: có nút **Kiểm tra** riêng, do `QuestionStage` hiển thị khi được truyền `onSubmit` (+ `feedback` sau khi chấm, hoặc `submitted` ở chế độ xem thử). Sau khi chấm tự hiện đáp án đúng (đáp án đầu tiên / câu đúng) nên `FeedbackBanner` không lặp lại.
-  - `ListenButton` + `fe/src/shared/speech`: đọc `audioText` bằng Web Speech API, giọng en-US/en-GB, tốc độ 0.85. Máy không có giọng tiếng Anh → hiện chữ thay thế; ở chế độ xem thử giáo viên thấy cảnh báo.
+  - `ListenButton`: phát `audioUrl` (giọng `TTS_LANGUAGE`, tốc độ 0.85). Dữ liệu chơi **không bao giờ** chứa `audioText`. Thiếu âm thanh → học sinh thấy thông báo, giáo viên xem thử thấy cách khắc phục.
   - `FeedbackBanner` (lời khen/động viên, không bao giờ trách), `PlayTopBar` (tiến độ, ✅, 🔥), `QuestionStage` (ảnh, nút nghe, chỗ trống được tô, hiệu ứng chuyển câu 0.22s).
   - `lib/answers.ts`: `isAnswered` cho cả 4 dạng; chuẩn hoá so sánh giống bộ chấm ở server.
 - Không còn lưu đáp án ở localStorage: **server là nơi giữ tiến trình** (giai đoạn 1 dùng `usePlayStore`, đã bỏ).
@@ -87,5 +87,4 @@ Học sinh trả lời từng câu (trắc nghiệm, nối từ, điền từ, s
 
 ## Hướng mở rộng
 - Câu hỏi có đồng hồ đếm ngược (trắc nghiệm nhanh).
-- File âm thanh dựng ở server cho câu nghe (không gửi `audioText` xuống máy học sinh).
 - Thi đấu trực tiếp nhiều người qua Socket.io (giai đoạn 3).

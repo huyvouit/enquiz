@@ -3,6 +3,8 @@ import { useAuthStore } from '@/features/auth'
 import { errorMessage } from '@/shared/api/http'
 import { Button, EmptyState, ErrorBox, PageHeader, Spinner } from '@/shared/components'
 import { questionsApi } from '../api/questions.api'
+import { AudioBackfillBanner } from '../components/AudioBackfillBanner'
+import { invalidateQuestions } from '../hooks/queries'
 import { Pagination } from '../components/Pagination'
 import { QuestionFiltersBar } from '../components/QuestionFiltersBar'
 import { QuestionPreview } from '../components/QuestionPreview'
@@ -20,7 +22,7 @@ export function QuestionBankPage() {
     if (!window.confirm(`Xoá câu hỏi "${q.questionText}"?`)) return
     try {
       await questionsApi.remove(q.id)
-      reload()
+      void invalidateQuestions()
     } catch (err) {
       window.alert(errorMessage(err))
     }
@@ -42,6 +44,7 @@ export function QuestionBankPage() {
           </>
         }
       />
+      {user?.role === 'admin' ? <AudioBackfillBanner /> : null}
       <div className="mb-5">
         <QuestionFiltersBar value={filters} onChange={setFilters} />
       </div>

@@ -7,8 +7,13 @@ export interface PlayQuestion {
   /** fill_in_blank: contains exactly one BLANK ("___"). */
   questionText: string
   mediaUrl?: string
-  /** English text the browser reads aloud (listening questions). */
-  audioText?: string
+  /**
+   * Listening: MP3 made by the server's text-to-speech. The text itself is
+   * never sent, since it is often the answer (plan D16).
+   */
+  audioUrl?: string
+  /** Listening question whose audio is not ready yet. */
+  audioPending?: true
   /** multiple_choice: shuffled choices. fill_in_blank: shuffled word bank (absent = typing). */
   options?: string[]
   matching?: { lefts: string[]; rights: string[] }

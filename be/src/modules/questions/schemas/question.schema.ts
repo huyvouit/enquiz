@@ -50,9 +50,16 @@ export class Question {
   @Prop({ type: String })
   mediaUrl?: string;
 
-  /** English text read aloud by the browser (listening questions). */
+  /**
+   * English text of a listening question. Teachers only: it often IS the
+   * answer, so students get `audioUrl` instead (plan D16).
+   */
   @Prop({ type: String, trim: true })
   audioText?: string;
+
+  /** Text-to-speech MP3 of `audioText`; missing = not made yet (TTS off or failed). */
+  @Prop({ type: String })
+  audioUrl?: string;
 
   @Prop({ type: [String], default: [] })
   tags: string[];

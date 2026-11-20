@@ -38,7 +38,9 @@ export interface AttemptDetailItem extends AnswerFeedback {
   type: QuestionType | null;
   questionText: string | null;
   mediaUrl?: string;
+  /** Shown after the attempt, as the transcript of what was heard. */
   audioText?: string;
+  audioUrl?: string;
 }
 
 export interface AttemptProgression {
@@ -143,6 +145,7 @@ export function toAttemptResult(
         questionText: q?.questionText ?? null,
         mediaUrl: q?.mediaUrl,
         audioText: q?.audioText,
+        audioUrl: q?.audioUrl,
       };
     }),
   };

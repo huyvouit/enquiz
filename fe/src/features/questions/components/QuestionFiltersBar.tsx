@@ -1,7 +1,6 @@
 import { GRADE_LEVELS, type QuestionType } from '@/shared/api/types'
 import { Input, Select, Toggle } from '@/shared/components'
-import { useAsync } from '@/shared/hooks/useAsync'
-import { questionsApi } from '../api/questions.api'
+import { useTopics } from '../hooks/queries'
 import { AUTHORABLE_TYPES, QUESTION_TYPE_LABELS, type QuestionFilters } from '../types'
 
 export function QuestionFiltersBar({
@@ -11,7 +10,7 @@ export function QuestionFiltersBar({
   value: QuestionFilters
   onChange: (next: QuestionFilters) => void
 }) {
-  const topics = useAsync(() => questionsApi.topics(), [])
+  const topics = useTopics()
   // Any filter change goes back to page 1.
   const patch = (p: Partial<QuestionFilters>) => onChange({ ...value, ...p, page: 1 })
 

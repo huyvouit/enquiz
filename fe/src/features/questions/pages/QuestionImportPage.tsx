@@ -6,6 +6,7 @@ import { Badge, Button, Card, ErrorBox, PageHeader, Spinner } from '@/shared/com
 import { cn } from '@/shared/lib/cn'
 import { playSfx } from '@/shared/sound'
 import { questionsApi } from '../api/questions.api'
+import { invalidateQuestions } from '../hooks/queries'
 import { QUESTION_TYPE_LABELS, type ImportReport } from '../types'
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024
@@ -64,6 +65,7 @@ export function QuestionImportPage() {
     setStep({ kind: 'importing', fileName: step.fileName, report: step.report })
     try {
       const report = await questionsApi.importCsv(step.csv, false)
+      void invalidateQuestions()
       playSfx('finish')
       setStep({ kind: 'done', report })
     } catch (err) {

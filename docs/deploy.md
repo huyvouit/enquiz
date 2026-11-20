@@ -26,7 +26,7 @@ gcloud auth login
 gcloud projects create $PROJECT_ID   # bỏ qua nếu đã có project
 gcloud config set project $PROJECT_ID
 gcloud services enable run.googleapis.com artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com secretmanager.googleapis.com
+  cloudbuild.googleapis.com secretmanager.googleapis.com texttospeech.googleapis.com
 gcloud artifacts repositories create enquiz --repository-format=docker --location=$REGION
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
 RUN_SA=$PROJECT_NUMBER-compute@developer.gserviceaccount.com   # tài khoản chạy Cloud Run
@@ -40,7 +40,7 @@ RUN_SA=$PROJECT_NUMBER-compute@developer.gserviceaccount.com   # tài khoản ch
 4. Lấy chuỗi kết nối và thêm tên DB, ví dụ `mongodb+srv://enquiz:<pass>@cluster0.xxxx.mongodb.net/enquiz?retryWrites=true&w=majority`.
 5. **Backup:** M0 không có backup tự động. Hoặc nâng gói, hoặc chạy `mongodump` định kỳ.
 
-Nạp kho câu hỏi và tạo admin đầu tiên **từ máy local** (cả hai lệnh đều chạy lại an toàn):
+Nạp kho câu hỏi và tạo admin đầu tiên **từ máy local** (cả hai lệnh đều chạy lại an toàn). Máy local để `TTS_DRIVER` mặc định (`none`), nên câu nghe được nạp **chưa có âm thanh**; sau khi deploy, admin bấm "Tạo âm thanh" (bước 6 của mục kiểm tra). Nhờ vậy máy local không cần khoá TTS hay khoá Storage.
 
 ```bash
 cd be
@@ -52,11 +52,11 @@ unset MONGODB_URI JWT_SECRET
 cd ..
 ```
 
-## 2. Cloud Storage cho ảnh
+## 2. Cloud Storage cho ảnh và âm thanh
 
 ```bash
 gcloud storage buckets create gs://$BUCKET --location=$REGION --uniform-bucket-level-access
-# Ảnh câu hỏi là công khai (học sinh tải trực tiếp)
+# Ảnh (images/) và âm thanh câu nghe (audio/) là công khai: học sinh tải trực tiếp
 gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
   --member=allUsers --role=roles/storage.objectViewer
 
@@ -69,7 +69,9 @@ gcloud storage hmac create enquiz-storage@$PROJECT_ID.iam.gserviceaccount.com
 # → ghi lại accessId và secret cho bước 3
 ```
 
-Nếu tổ chức chặn `allUsers` (Public Access Prevention), ảnh sẽ không hiển thị. Khi đó cần tắt chính sách này cho riêng bucket.
+Nếu tổ chức chặn `allUsers` (Public Access Prevention), ảnh và âm thanh sẽ không tải được. Khi đó cần tắt chính sách này cho riêng bucket.
+
+**Khoá Text-to-Speech (D16):** tạo API key và **giới hạn chỉ cho Text-to-Speech API**: Console → APIs & Services → Credentials → Create credentials → API key → API restrictions: Cloud Text-to-Speech API. Ghi lại khoá cho bước 3.
 
 ## 3. Secret Manager
 
@@ -78,6 +80,7 @@ openssl rand -base64 48 | tr -d '\n' | gcloud secrets create jwt-secret --data-f
 printf '%s' 'mongodb+srv://...'   | gcloud secrets create mongodb-uri --data-file=-
 printf '%s' '<HMAC accessId>'     | gcloud secrets create gcs-hmac-id --data-file=-
 printf '%s' '<HMAC secret>'       | gcloud secrets create gcs-hmac-secret --data-file=-
+printf '%s' '<TTS API key>'       | gcloud secrets create tts-api-key --data-file=-
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member=serviceAccount:$RUN_SA --role=roles/secretmanager.secretAccessor
@@ -94,8 +97,8 @@ gcloud builds submit be --tag $REPO/api:$TAG
 
 gcloud run deploy enquiz-api --image=$REPO/api:$TAG --region=$REGION \
   --allow-unauthenticated --min-instances=0 --max-instances=1 --memory=512Mi \
-  --set-env-vars=SEED_DEMO_DATA=false,TRUST_PROXY=1,CORS_ORIGIN=https://$PROJECT_ID.web.app,STORAGE_DRIVER=s3,S3_BUCKET=$BUCKET,S3_REGION=auto,S3_ENDPOINT=https://storage.googleapis.com,S3_PUBLIC_URL=https://storage.googleapis.com/$BUCKET \
-  --set-secrets=JWT_SECRET=jwt-secret:latest,MONGODB_URI=mongodb-uri:latest,AWS_ACCESS_KEY_ID=gcs-hmac-id:latest,AWS_SECRET_ACCESS_KEY=gcs-hmac-secret:latest
+  --set-env-vars=SEED_DEMO_DATA=false,TRUST_PROXY=1,CORS_ORIGIN=https://$PROJECT_ID.web.app,STORAGE_DRIVER=s3,S3_BUCKET=$BUCKET,S3_REGION=auto,S3_ENDPOINT=https://storage.googleapis.com,S3_PUBLIC_URL=https://storage.googleapis.com/$BUCKET,TTS_DRIVER=google,TTS_LANGUAGE=en-GB \
+  --set-secrets=JWT_SECRET=jwt-secret:latest,MONGODB_URI=mongodb-uri:latest,AWS_ACCESS_KEY_ID=gcs-hmac-id:latest,AWS_SECRET_ACCESS_KEY=gcs-hmac-secret:latest,GOOGLE_TTS_API_KEY=tts-api-key:latest
 ```
 
 Giải thích các tham số chính:
@@ -132,7 +135,8 @@ cd ..
    ```
    Việc chạy `@nestjs/storage` với Cloud Storage chưa từng được thử. Nếu không chạy được, thay thư viện ở 4.1.
 5. Xuất thử bảng điểm Excel và PDF, kiểm tra tiếng Việt có dấu hiển thị đúng.
-6. Đăng nhập thử **11 lần sai** với cùng một username. Lần thứ 11 phải bị chặn (429). Đăng nhập bằng username khác thì vẫn bình thường.
+6. **Âm thanh câu nghe:** admin vào Kho câu hỏi, bấm **🔊 Tạo âm thanh** cho tới khi thanh báo biến mất. Mở một trạm có câu nghe bằng tài khoản học sinh: nút 🔊 phát được, và dữ liệu `/play` (tab Network) **không có** chữ của câu đọc. Nếu báo lỗi, xem log Cloud Run: thường là khoá chưa được phép gọi Text-to-Speech API.
+7. Đăng nhập thử **11 lần sai** với cùng một username. Lần thứ 11 phải bị chặn (429). Đăng nhập bằng username khác thì vẫn bình thường.
 
 ## Cập nhật và rollback
 

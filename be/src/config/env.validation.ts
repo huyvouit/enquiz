@@ -28,6 +28,18 @@ export interface AppEnv {
   S3_ENDPOINT: string;
   /** Public base URL the bucket's images are served from. */
   S3_PUBLIC_URL: string;
+  /**
+   * Text-to-speech for listening questions (plan D16): `google` (Cloud
+   * Text-to-Speech), `none` (no audio is made; questions show "no audio yet")
+   * or `fake` (tests only).
+   */
+  TTS_DRIVER: 'none' | 'google' | 'fake';
+  /** API key restricted to the Text-to-Speech API. Required for `google`. */
+  GOOGLE_TTS_API_KEY: string;
+  /** BCP-47 language of the voice, e.g. en-GB (Cambridge YLE) or en-US. */
+  TTS_LANGUAGE: string;
+  /** Optional exact voice name, e.g. en-GB-Standard-A; empty = API default. */
+  TTS_VOICE: string;
 }
 
 export function validateEnv(raw: Record<string, unknown>): AppEnv {
@@ -56,6 +68,10 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     S3_REGION: str('S3_REGION', ''),
     S3_ENDPOINT: str('S3_ENDPOINT', ''),
     S3_PUBLIC_URL: str('S3_PUBLIC_URL', ''),
+    TTS_DRIVER: str('TTS_DRIVER', 'none') as AppEnv['TTS_DRIVER'],
+    GOOGLE_TTS_API_KEY: str('GOOGLE_TTS_API_KEY', ''),
+    TTS_LANGUAGE: str('TTS_LANGUAGE', 'en-GB'),
+    TTS_VOICE: str('TTS_VOICE', ''),
   };
 
   if (Number.isNaN(env.PORT)) errors.push('PORT must be a number');
@@ -66,6 +82,15 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     errors.push(
       'S3_BUCKET and S3_PUBLIC_URL are required when STORAGE_DRIVER=s3',
     );
+  }
+  if (!['none', 'google', 'fake'].includes(env.TTS_DRIVER)) {
+    errors.push('TTS_DRIVER must be none, google or fake');
+  }
+  if (env.TTS_DRIVER === 'google' && !env.GOOGLE_TTS_API_KEY) {
+    errors.push('GOOGLE_TTS_API_KEY is required when TTS_DRIVER=google');
+  }
+  if (!/^[a-z]{2,3}-[A-Z]{2}$/.test(env.TTS_LANGUAGE)) {
+    errors.push('TTS_LANGUAGE must look like en-GB');
   }
   for (const key of ['AUTH_RATE_LIMIT', 'AUTH_IP_RATE_LIMIT'] as const) {
     if (!Number.isInteger(env[key]) || env[key] < 1) {

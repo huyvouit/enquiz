@@ -1,6 +1,14 @@
 import { api, downloadFile } from '@/shared/api/http'
 import type { Paginated } from '@/shared/api/types'
-import type { ImportReport, Question, QuestionFilters, QuestionPayload, UploadedImage } from '../types'
+import type {
+  AudioBackfillResult,
+  AudioStatus,
+  ImportReport,
+  Question,
+  QuestionFilters,
+  QuestionPayload,
+  UploadedImage,
+} from '../types'
 
 /** Drops empty filter values so they are not sent as `?topic=`. */
 function cleanParams(filters: QuestionFilters) {
@@ -22,4 +30,8 @@ export const questionsApi = {
   importCsv: (csv: string, dryRun: boolean) =>
     api.post<ImportReport>(`/questions/import?dryRun=${dryRun}`, { csv }),
   downloadTemplate: () => downloadFile('/questions/import/template', undefined, 'mau-cau-hoi-enquiz.csv'),
+  /** Admin: listening questions still without text-to-speech audio. */
+  audioStatus: () => api.get<AudioStatus>('/questions/audio/status'),
+  /** Admin: makes the missing audio, one small batch per call. */
+  backfillAudio: () => api.post<AudioBackfillResult>('/questions/audio/backfill', undefined, 60_000),
 }

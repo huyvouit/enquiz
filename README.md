@@ -124,12 +124,12 @@ fe/src/
 ├── shared/     # Dùng chung, KHÔNG import từ features/
 │   ├── api/        # axios instance (http.ts), kiểu dùng chung
 │   ├── components/ # Button, Card, Modal, Mascot, Form...
-│   ├── hooks/      # useAsync...
 │   └── lib/        # tiện ích thuần
 └── features/<feature>/
     ├── api/        # gọi API của feature
     ├── components/ # UI riêng của feature
-    ├── hooks/ store/ lib/
+    ├── hooks/      # queries.ts: query key, hook TanStack, invalidate…()
+    ├── store/ lib/
     ├── pages/      # màn hình gắn vào route
     ├── types.ts
     └── index.ts    # PUBLIC API — feature khác chỉ được import từ đây
@@ -137,7 +137,7 @@ fe/src/
 - Feature A dùng feature B: `import { X } from '@/features/b'`, **không** import sâu vào file bên trong B. Ngoại lệ duy nhất: `app/router.tsx` import thẳng file trang (`features/x/pages/...`) để lazy-load tách bundle.
 - Tránh import vòng giữa các feature (hiện tại: `play → progress, assignments`, `progress → classes`, `quizzes → questions, progress, assignments, classes`, `assignments → classes`, `analytics → classes`; `classes` chỉ dùng `auth` và `shared`).
 - Gọi API qua `api.get/post/put/delete` trong `shared/api/http.ts` (đã gắn token, bóc `data`, đổi lỗi thành `ApiError` có `message` tiếng Việt).
-- Trạng thái toàn cục dùng **Zustand** (`features/*/store`). Dữ liệu server: màn hình mới (từ giai đoạn 3) dùng **TanStack Query** (`shared/api/query-client.ts`, query key bắt đầu bằng tên feature, ví dụ `['classes', id]`); màn cũ còn dùng `useAsync`, chuyển dần. Đăng xuất xoá toàn bộ cache.
+- Trạng thái toàn cục dùng **Zustand** (`features/*/store`). Dữ liệu server: mọi màn hình dùng **TanStack Query** (`shared/api/query-client.ts`). Mỗi feature khai báo query key trong `hooks/queries.ts` (key bắt đầu bằng tên feature, ví dụ `['classes', id]`) kèm hàm `invalidate…()`; **mọi thao tác ghi phải gọi `invalidate…()`** của các feature bị ảnh hưởng (ví dụ nộp bài → `invalidateProgress()` + `invalidateAssignments()`). Form sửa dữ liệu nạp chi tiết với `gcTime: 0` để không khởi tạo từ bản cache cũ. Đăng xuất xoá toàn bộ cache.
 - Tính năng gắn vào trang của feature khác qua **props/tab do `app/` truyền vào** (ví dụ tab Bài tập, Thống kê trong trang lớp: `ClassTabProps`), không import ngược.
 - Tải file dùng `downloadFile(url, params)`; upload dùng `api.upload(url, field, file)` (`shared/api/http.ts`).
 - Style bằng Tailwind với **token màu ở `src/index.css`** (`bg-brand`, `text-ink`, `bg-sunny-soft`...), không viết mã màu rời rạc.

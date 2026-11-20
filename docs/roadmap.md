@@ -29,7 +29,7 @@ Kế hoạch, quyết định D1–D11 (đã chốt): **[phase-3-plan.md](phase-
 Kế hoạch, quyết định D12–D18 và E1–E8, kết quả từng mốc: **[phase-4-plan.md](phase-4-plan.md)** · Hướng dẫn deploy: **[deploy.md](deploy.md)**.
 Thứ tự: **4.0 → 4.1 → 4.2**; 4.3 làm song song được sau 4.0.
 - [ ] 4.0 Deploy & hạ tầng: Firebase Hosting + Cloud Run + Atlas + Cloud Storage (D12); CI; giới hạn đăng nhập theo username/IP (D14); `create:admin` (D15). **Code xong** ([kết quả](phase-4-plan.md#kết-quả-40)), chờ dựng hạ tầng
-- [ ] 4.1 Bảo mật & nợ kỹ thuật: câu nghe không lộ `audioText` (D16), xoá bù khi tạo học sinh hàng loạt lỗi (D17), thư viện lưu file (D18), bỏ `useAsync`
+- [ ] 4.1 Bảo mật & nợ kỹ thuật: câu nghe dùng text-to-speech ở server, không lộ `audioText` (D16); xoá bù khi tạo học sinh hàng loạt lỗi (D17); bỏ `useAsync`. **Code xong** ([kết quả](phase-4-plan.md#kết-quả-41)); thư viện lưu file (D18) chờ thử bucket thật
 - [ ] 4.2 Exam Mode (E1–E8): đếm giờ ở server, Previous/Next, rà soát & đánh dấu, 1 lượt, tự nộp khi hết giờ, không cộng XP/mở trạm
 - [ ] 4.3 UX & thao tác giáo viên: chạm trên tablet, in thẻ đăng nhập, nhân bản câu, CSV mẫu, nổi câu sai nhiều, vị trí cá nhân trên bảng xếp hạng
 
@@ -55,7 +55,5 @@ Kế hoạch: `phase-6-plan.md` (viết trước khi bắt đầu giai đoạn).
 
 ## Nợ kỹ thuật đã biết
 - Bản đồ, bảng xếp hạng, trạng thái bài tập và thống kê tính lại mỗi lần gọi (aggregate). Đủ nhanh cho lớp ≤ 60 em; cần cache/bảng tổng hợp khi một trường có hàng nghìn học sinh.
-- `audioText` gửi xuống máy học sinh, có thể lộ đáp án → xử lý ở 4.1.
-- Tạo học sinh hàng loạt chưa dùng transaction; lỗi giữa chừng có thể để lại một phần tài khoản → xử lý ở 4.1.
-- `@nestjs/storage` ghim bản `0.0.5` → thay ở 4.1.
-- Màn hình cũ còn dùng `useAsync` → chuyển ở 4.1.
+- Tạo học sinh hàng loạt dùng xoá bù thay transaction (D17): server sập đúng giữa hai bước vẫn có thể sót tài khoản.
+- `@nestjs/storage` ghim bản `0.0.5` → giữ hay thay quyết định sau khi thử với bucket thật (D18).

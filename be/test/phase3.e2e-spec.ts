@@ -16,12 +16,16 @@ process.env.AUTH_RATE_LIMIT = '1000';
 process.env.AUTH_IP_RATE_LIMIT = '1000';
 // Uploads go to a throwaway folder, never into the repository.
 process.env.UPLOAD_DIR = `${tmpdir()}/enquiz-e2e-${process.pid}`;
+// Listening audio (plan D16) from a fake text-to-speech: no network.
+process.env.TTS_DRIVER = 'fake';
 
 const { AppModule } = await import('../src/app.module.js');
 const { setupApp } = await import('../src/common/setup-app.js');
 
 const API = '/api/v1';
 const HOUR = 3600_000;
+/** Local text-to-speech audio: content-hash keys only (plan D16). */
+const AUDIO_URL = /^\/api\/v1\/uploads\/audio\/[0-9a-f]{32}\.mp3$/;
 
 describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
   let app: INestApplication<App>;
@@ -825,6 +829,7 @@ describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
     );
     let imageUrl: string;
     const ids: Record<string, string> = {};
+    let listenAudioUrl: string;
 
     it('uploads images, checking the real file type and size', async () => {
       const ok = await http
@@ -915,10 +920,12 @@ describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
       expect(listen.body.data).toMatchObject({
         skill: 'listening',
         audioText: 'a duck',
+        audioUrl: expect.stringMatching(AUDIO_URL),
         tags: ['farm', 'birds'],
         yleLevel: 'starters',
       });
       ids.listen = listen.body.data.id;
+      listenAudioUrl = listen.body.data.audioUrl;
 
       await http
         .post(`${API}/questions`)
@@ -973,7 +980,13 @@ describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
         'my',
       ]);
       expect(oq.ordering.items).not.toEqual(['I', 'like', 'my', 'cat']);
-      expect(lq.audioText).toBe('a duck');
+      // Listening (plan D16): the audio only, never the text that is the answer.
+      expect(lq.audioText).toBeUndefined();
+      expect(lq.audioUrl).toBe(listenAudioUrl);
+      expect(raw).not.toContain('a duck');
+      const mp3 = await http.get(lq.audioUrl).responseType('blob').expect(200);
+      expect(mp3.headers['content-type']).toBe('audio/mpeg');
+      expect(Buffer.from(mp3.body).toString()).toBe('FAKE-MP3:a duck');
 
       const s = await http
         .post(`${API}/progress/sessions`)
@@ -995,6 +1008,110 @@ describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
         correctAnswer: ['I', 'like', 'my', 'cat'],
       });
       expect((await answer(ids.listen, '🦆')).body.data.isCorrect).toBe(true);
+    });
+    it('makes new audio when the text changes and drops it with the text', async () => {
+      const base = {
+        topic: 'Animals',
+        gradeLevel: 1,
+        type: 'multiple_choice',
+        questionText: 'Nghe và chọn',
+        options: ['🐶', '🐱'],
+        correctAnswer: '🐶',
+      };
+      const q = await http
+        .post(`${API}/questions`)
+        .set(auth(teacherToken))
+        .send({ ...base, audioText: 'a dog' })
+        .expect(201);
+      const first = q.body.data.audioUrl;
+      expect(first).toMatch(AUDIO_URL);
+
+      const same = await http
+        .put(`${API}/questions/${q.body.data.id}`)
+        .set(auth(teacherToken))
+        .send({ ...base, audioText: 'a dog' })
+        .expect(200);
+      expect(same.body.data.audioUrl).toBe(first);
+
+      const changed = await http
+        .put(`${API}/questions/${q.body.data.id}`)
+        .set(auth(teacherToken))
+        .send({ ...base, audioText: 'a puppy' })
+        .expect(200);
+      expect(changed.body.data.audioUrl).toMatch(AUDIO_URL);
+      expect(changed.body.data.audioUrl).not.toBe(first);
+
+      const silent = await http
+        .put(`${API}/questions/${q.body.data.id}`)
+        .set(auth(teacherToken))
+        .send(base)
+        .expect(200);
+      expect(silent.body.data.audioText).toBeUndefined();
+      expect(silent.body.data.audioUrl).toBeUndefined();
+    });
+
+    it('lets only the admin fill in missing audio, in batches', async () => {
+      // As if saved while TTS was off: text but no audio.
+      await db
+        .collection('questions')
+        .updateOne(
+          { _id: new Types.ObjectId(ids.listen) },
+          { $unset: { audioUrl: '' } },
+        );
+      await http
+        .get(`${API}/questions/audio/status`)
+        .set(auth(teacherToken))
+        .expect(403);
+      const before = await http
+        .get(`${API}/questions/audio/status`)
+        .set(auth(adminToken))
+        .expect(200);
+      expect(before.body.data).toEqual({ enabled: true, missing: 1 });
+
+      const run = await http
+        .post(`${API}/questions/audio/backfill`)
+        .set(auth(adminToken))
+        .expect(200);
+      expect(run.body.data).toEqual({ generated: 1, failed: 0, remaining: 0 });
+      const q = await http
+        .get(`${API}/questions/${ids.listen}`)
+        .set(auth(teacherToken))
+        .expect(200);
+      expect(q.body.data.audioUrl).toBe(listenAudioUrl);
+    });
+  });
+
+  describe('CSV listening rows', () => {
+    const header =
+      'type,topic,gradeLevel,questionText,options,correctAnswer,pairs,audioText,externalId';
+
+    it('makes the audio on import and clears it when a re-import drops the text', async () => {
+      const withAudio = [
+        header,
+        'mc,Numbers,1,Nghe và chọn số,3|5,5,,five,e2e-listen-1',
+      ].join('\n');
+      await http
+        .post(`${API}/questions/import?dryRun=false`)
+        .set(auth(adminToken))
+        .send({ csv: withAudio })
+        .expect(200);
+      const find = () =>
+        db.collection('questions').findOne({ externalId: 'e2e-listen-1' });
+      expect((await find())?.audioUrl).toMatch(AUDIO_URL);
+
+      const withoutAudio = [
+        header,
+        'mc,Numbers,1,Nghe và chọn số,3|5,5,,,e2e-listen-1',
+      ].join('\n');
+      const again = await http
+        .post(`${API}/questions/import?dryRun=false`)
+        .set(auth(adminToken))
+        .send({ csv: withoutAudio })
+        .expect(200);
+      expect(again.body.data.updated).toBe(1);
+      const after = await find();
+      expect(after?.audioText).toBeUndefined();
+      expect(after?.audioUrl).toBeUndefined();
     });
   });
 

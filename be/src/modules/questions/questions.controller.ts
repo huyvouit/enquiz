@@ -23,6 +23,7 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 import { Role } from '../../common/enums/role.enum.js';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
+import { BackfillAudioCommand, GetAudioStatusQuery } from './audio-backfill.js';
 import { CreateQuestionCommand } from './commands/impl/create-question.command.js';
 import { DeleteQuestionCommand } from './commands/impl/delete-question.command.js';
 import { UpdateQuestionCommand } from './commands/impl/update-question.command.js';
@@ -59,6 +60,21 @@ export class QuestionsController {
    * POST /questions/import?dryRun=true|false — body { csv }.
    * Each row goes through the same rules as the form; errors are per row.
    */
+  /** GET /questions/audio/status — listening questions still without audio (plan D16). */
+  @Roles(Role.ADMIN)
+  @Get('audio/status')
+  audioStatus() {
+    return this.queryBus.execute(new GetAudioStatusQuery());
+  }
+
+  /** POST /questions/audio/backfill — makes the missing audio, one batch per call. */
+  @Roles(Role.ADMIN)
+  @Post('audio/backfill')
+  @HttpCode(HttpStatus.OK)
+  backfillAudio() {
+    return this.commandBus.execute(new BackfillAudioCommand());
+  }
+
   @Post('import')
   @HttpCode(HttpStatus.OK)
   importCsv(

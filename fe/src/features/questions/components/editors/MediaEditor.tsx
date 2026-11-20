@@ -77,17 +77,41 @@ export function ImageField({ value, onChange }: { value: string; onChange: (url:
   )
 }
 
-/** Text the browser reads aloud: turns the question into a listening one. */
-export function AudioTextField({ value, onChange }: { value: string; onChange: (text: string) => void }) {
+/**
+ * English text of a listening question. On save the server turns it into an
+ * MP3 (plan D16); students only get the audio, never this text.
+ * "Nghe thử" before saving uses this device's voice, which may differ.
+ */
+export function AudioTextField({
+  value,
+  onChange,
+  savedText,
+  audioUrl,
+}: {
+  value: string
+  onChange: (text: string) => void
+  /** The text as last saved, to tell whether its audio is current. */
+  savedText?: string
+  audioUrl?: string
+}) {
   const [voice, setVoice] = useState<boolean | null>(null)
   useEffect(() => {
     void voicesReady().then(setVoice)
   }, [])
 
+  const text = value.trim()
+  const saved = text !== '' && text === (savedText ?? '').trim()
+  const ready = saved && !!audioUrl
+
+  function listen() {
+    if (ready) void new Audio(audioUrl).play().catch(() => undefined)
+    else speak(text)
+  }
+
   return (
     <Field
       label="Câu đọc to bằng tiếng Anh (tuỳ chọn)"
-      hint="Có nội dung này, câu hỏi thành dạng Nghe: máy đọc to cho học sinh, kỹ năng tự chuyển sang “Nghe”."
+      hint="Có nội dung này, câu hỏi thành dạng Nghe: khi lưu, hệ thống tạo file đọc to cho học sinh nghe (học sinh không thấy chữ)."
     >
       <div className="flex gap-2">
         <Input
@@ -100,17 +124,23 @@ export function AudioTextField({ value, onChange }: { value: string; onChange: (
         <Button
           variant="secondary"
           aria-label="Nghe thử"
-          disabled={!value.trim() || voice === false}
-          onClick={() => speak(value)}
+          disabled={!text || (!ready && voice === false)}
+          onClick={listen}
         >
           ▶ Nghe
         </Button>
       </div>
-      {voice === false ? (
+      {text === '' ? null : ready ? (
+        <span className="text-xs font-bold text-green-700">✅ Đã có âm thanh cho học sinh.</span>
+      ) : saved ? (
         <span className="text-xs font-bold text-yellow-800">
-          ⚠️ Máy này chưa có giọng đọc tiếng Anh nên không nghe thử được; học sinh dùng máy như vậy sẽ thấy chữ.
+          ⚠️ Chưa tạo được âm thanh. Bấm Lưu để thử lại, hoặc nhờ quản trị viên tạo âm thanh.
         </span>
-      ) : null}
+      ) : (
+        <span className="text-xs text-ink-soft">
+          Âm thanh sẽ được tạo khi lưu. “Nghe thử” lúc này dùng giọng của máy bạn.
+        </span>
+      )}
     </Field>
   )
 }
