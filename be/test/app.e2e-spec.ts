@@ -9,6 +9,7 @@ process.env.MONGODB_URI = 'memory';
 process.env.JWT_SECRET = 'e2e-test-secret-at-least-16-chars';
 process.env.SEED_DEMO_DATA = 'true';
 process.env.AUTH_RATE_LIMIT = '1000';
+process.env.AUTH_IP_RATE_LIMIT = '1000';
 // Uploads go to a throwaway folder, never into the repository.
 process.env.UPLOAD_DIR = `${tmpdir()}/enquiz-e2e-${process.pid}`;
 
@@ -48,7 +49,10 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
 
   it('health is public', async () => {
     const res = await http.get(`${API}/health`).expect(200);
-    expect(res.body).toEqual({ success: true, data: { status: 'ok' } });
+    expect(res.body).toEqual({
+      success: true,
+      data: { status: 'ok', clientIp: expect.any(String) },
+    });
   });
 
   describe('auth', () => {

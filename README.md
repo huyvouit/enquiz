@@ -151,7 +151,7 @@ fe/src/
 - **Không commit file `.env`** (đã có trong `.gitignore`). Mỗi biến mới phải thêm vào `.env.example` kèm chú thích và vào `be/src/config/env.validation.ts`.
 - `JWT_SECRET` ≥ 16 ký tự, ngẫu nhiên. Mật khẩu băm bằng bcrypt; trường `password` có `select: false`.
 - Không tự đăng ký được vai trò `admin`. Giáo viên tự đăng ký ở trạng thái **chờ duyệt**.
-- Đăng nhập/đăng ký bị giới hạn `AUTH_RATE_LIMIT` lần/phút/IP (429). `helmet` bật cho mọi response.
+- Đăng nhập/đăng ký bị giới hạn `AUTH_RATE_LIMIT` lần/phút/username và `AUTH_IP_RATE_LIMIT` lần/phút/IP (429); sau proxy phải đặt đúng `TRUST_PROXY`. `helmet` bật cho mọi response.
 - **Mật khẩu tạm** (tạo hàng loạt, đặt lại) chỉ trả về **một lần**, không lưu dạng rõ, không ghi log.
 - File upload: kiểm tra **chữ ký file** (không tin đuôi), tối đa 1 MB, chỉ PNG/JPG/WebP; chỉ phục vụ key dạng `<uuid>.<ext>`.
 - Xem xét yêu cầu đồng ý của phụ huynh theo Nghị định 13/2023/NĐ-CP trước khi dùng thật ở trường.
