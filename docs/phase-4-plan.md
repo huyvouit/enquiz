@@ -371,7 +371,7 @@ student_progress           mode ('classic' mặc định), isAutoSubmit
 
 ### Kết quả 4.2
 
-> Ngày: 2026-11-20 · Nhánh `feat/4.2-exam-mode` (chưa commit) · Trạng thái: **code xong**, chưa chạy trên môi trường deploy
+> Ngày: 2026-11-20 · [PR #3](https://github.com/huyvouit/enquiz/pull/3) đã merge vào `main` (merge commit `1c786cb`) · Trạng thái: **code xong**, chưa chạy trên môi trường deploy
 
 **Đã làm**
 
@@ -392,6 +392,7 @@ student_progress           mode ('classic' mặc định), isAutoSubmit
 - Backend: lint, prettier sạch; **74 unit** test pass (14 mới); **65 e2e** test pass (18 mới trong `test/exam.e2e-spec.ts`); build thành công.
 - Frontend: `tsc`, lint, build sạch. `ExamPage` tải riêng (~17 kB), bundle chính giữ ~325 kB.
 - Chạy thử trên trình duyệt (dữ liệu tạm trong bộ nhớ, tablet và điện thoại): xem tài liệu 14, mục *Kiểm thử*. Không có lỗi console.
+- **CI trên PR #3:** xanh cả 3 job (backend, frontend, docker).
 - **Chưa kiểm tra:** chạy trên Cloud Run/Firebase thật; Safari trên iPad (`beforeunload` không chắc chạy — đã có nháp server bù lại).
 
 **Phát hiện và đã sửa trong lúc làm**
