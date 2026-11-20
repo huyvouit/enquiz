@@ -1,0 +1,49 @@
+type,topic,gradeLevel,skill,questionText,options,correctAnswer,pairs,audioText,mediaUrl,explanation,tags,yleLevel,unit,externalId,quiz,quizEmoji
+multiple_choice,Numbers,1,listening,Nghe và chọn số đúng,3|5|8,5,,five,,five = số 5,numbers,starters,,g1-listen-01,Nghe và chọn,🎧
+multiple_choice,Colors,1,listening,Nghe và chọn màu đúng,🔴|🟡|🔵,🟡,,yellow,,yellow = màu vàng,colors,starters,,g1-listen-02,Nghe và chọn,🎧
+multiple_choice,Animals,1,listening,Nghe và chọn con vật đúng,🐸|🐟|🐦,🐸,,a frog,,frog = con ếch,animals,starters,,g1-listen-03,Nghe và chọn,🎧
+fill_in_blank,Animals,1,vocabulary,🐱 It is a ___.,cat|dog|bird,cat,,,,cat = con mèo,animals,starters,,g1-listen-04,Nghe và chọn,🎧
+ordering,Me,1,grammar,Sắp xếp thành câu đúng,,I|am|six,,,,I am six = Em sáu tuổi,me,starters,,g1-listen-05,Nghe và chọn,🎧
+matching,Numbers,1,vocabulary,Nối số với chữ,,,1=one|2=two|3=three,,,,numbers,starters,,g1-listen-06,Nghe và chọn,🎧
+multiple_choice,Toys,2,vocabulary,🪁 What is this?,kite|ball|doll,kite,,,,kite = con diều,toys,starters,,g2-toys-01,Đồ chơi của em,🧸
+multiple_choice,Toys,2,listening,Nghe và chọn đồ chơi đúng,⚽|🧸|🚗,🧸,,a teddy bear,,teddy bear = gấu bông,toys,starters,,g2-toys-02,Đồ chơi của em,🧸
+fill_in_blank,Toys,2,vocabulary,I have a red ___. 🚗,car|bus|bed,car,,,,car = ô tô,toys,starters,,g2-toys-03,Đồ chơi của em,🧸
+fill_in_blank,Toys,2,vocabulary,⚽ Let's play ___!,,football|soccer,,,,football = bóng đá,toys,starters,,g2-toys-04,Đồ chơi của em,🧸
+ordering,Toys,2,grammar,Sắp xếp thành câu đúng,,This|is|my|doll,,,,,toys,starters,,g2-toys-05,Đồ chơi của em,🧸
+matching,Toys,2,vocabulary,Nối hình với từ,,,🎈=balloon|🧸=teddy bear|🪀=yo-yo,,,,toys,starters,,g2-toys-06,Đồ chơi của em,🧸
+multiple_choice,Food,3,vocabulary,🍞 What is this?,bread|rice|milk,bread,,,,bread = bánh mì,food,movers,,g3-food-01,Đồ ăn ngon,🍕
+multiple_choice,Food,3,grammar,I ___ like fish.,don't|doesn't|isn't,don't,,,,Chủ ngữ I đi với don't,food,movers,,g3-food-02,Đồ ăn ngon,🍕
+fill_in_blank,Food,3,vocabulary,🥛 I drink ___ every morning.,milk|bread|chicken,milk,,,,milk = sữa,food,movers,,g3-food-03,Đồ ăn ngon,🍕
+ordering,Food,3,grammar,Sắp xếp thành câu đúng,,I|like|chicken|and|rice,,,,,food,movers,,g3-food-04,Đồ ăn ngon,🍕
+matching,Food,3,vocabulary,Nối món ăn với từ,,,🍕=pizza|🍦=ice cream|🥕=carrot,,,,food,movers,,g3-food-05,Đồ ăn ngon,🍕
+multiple_choice,Food,3,listening,Nghe và chọn món ăn đúng,🍌|🍇|🍉,🍇,,grapes,,grapes = quả nho,food,movers,,g3-food-06,Đồ ăn ngon,🍕
+multiple_choice,Jobs,3,vocabulary,👩‍⚕️ She is a ___.,doctor|teacher|farmer,doctor,,,,doctor = bác sĩ,jobs,movers,,g3-jobs-01,Nghề nghiệp,👷
+multiple_choice,Jobs,3,listening,Nghe và chọn nghề đúng,👨‍🍳|👨‍🚒|👮,👨‍🚒,,a firefighter,,firefighter = lính cứu hoả,jobs,movers,,g3-jobs-02,Nghề nghiệp,👷
+fill_in_blank,Jobs,3,vocabulary,A ___ works on a farm.,farmer|pilot|dentist,farmer,,,,farmer = nông dân,jobs,movers,,g3-jobs-03,Nghề nghiệp,👷
+ordering,Jobs,3,grammar,Sắp xếp thành câu đúng,,My|dad|is|a|driver,,,,,jobs,movers,,g3-jobs-04,Nghề nghiệp,👷
+matching,Jobs,3,vocabulary,Nối nghề với nơi làm việc,,,teacher=school|doctor=hospital|cook=kitchen,,,,jobs,movers,,g3-jobs-05,Nghề nghiệp,👷
+multiple_choice,Jobs,3,grammar,What ___ your mother do?,does|do|is,does,,,,Chủ ngữ số ít (your mother) đi với does,jobs,movers,,g3-jobs-06,Nghề nghiệp,👷
+multiple_choice,Weather,4,vocabulary,☀️ It is ___ today.,sunny|rainy|snowy,sunny,,,,sunny = trời nắng,weather,movers,,g4-weather-01,Thời tiết,🌦️
+multiple_choice,Weather,4,listening,Nghe và chọn thời tiết đúng,🌧️|❄️|🌈,❄️,,It is snowy.,,snowy = có tuyết,weather,movers,,g4-weather-02,Thời tiết,🌦️
+fill_in_blank,Weather,4,vocabulary,Take your umbrella. It is ___.,,rainy,,,,rainy = trời mưa,weather,movers,,g4-weather-03,Thời tiết,🌦️
+ordering,Weather,4,grammar,Sắp xếp thành câu hỏi đúng,,What|is|the|weather|like,,,,,weather,movers,,g4-weather-04,Thời tiết,🌦️
+matching,Weather,4,vocabulary,Nối hình với thời tiết,,,☁️=cloudy|🌬️=windy|🌡️=hot,,,,weather,movers,,g4-weather-05,Thời tiết,🌦️
+multiple_choice,Weather,4,grammar,It ___ raining now.,is|are|am,is,,,,Chủ ngữ It đi với is,weather,movers,,g4-weather-06,Thời tiết,🌦️
+multiple_choice,Daily routines,4,grammar,⏰ I ___ up at six o'clock.,get|gets|getting,get,,,,Chủ ngữ I đi với động từ nguyên mẫu,routines,movers,,g4-day-01,Một ngày của em,⏰
+fill_in_blank,Daily routines,4,vocabulary,I brush my ___ every morning. 🪥,teeth|hair|hands,teeth,,,,teeth = răng,routines,movers,,g4-day-02,Một ngày của em,⏰
+ordering,Daily routines,4,grammar,Sắp xếp thành câu đúng,,She|goes|to|school|by|bus,,,,,routines,movers,,g4-day-03,Một ngày của em,⏰
+multiple_choice,Daily routines,4,listening,Nghe và chọn giờ đúng,7:00|7:30|8:00,7:30,,seven thirty,,seven thirty = 7 giờ 30,routines,movers,,g4-day-04,Một ngày của em,⏰
+matching,Daily routines,4,vocabulary,Nối hình với hoạt động,,,🛏️=go to bed|🍳=have breakfast|📚=do homework,,,,routines,movers,,g4-day-05,Một ngày của em,⏰
+multiple_choice,Daily routines,4,grammar,He ___ TV in the evening.,watches|watch|watching,watches,,,,Chủ ngữ He thêm -es vào watch,routines,movers,,g4-day-06,Một ngày của em,⏰
+multiple_choice,Holidays,5,grammar,Last summer we ___ to the beach.,went|go|goes,went,,,,Last summer là quá khứ: go -> went,holidays,flyers,,g5-holiday-01,Kỳ nghỉ hè,🏖️
+fill_in_blank,Holidays,5,grammar,I ___ a big fish yesterday.,caught|catch|catches,caught,,,,yesterday là quá khứ: catch -> caught,holidays,flyers,,g5-holiday-02,Kỳ nghỉ hè,🏖️
+ordering,Holidays,5,grammar,Sắp xếp thành câu hỏi đúng,,Where|did|you|go|last|weekend,,,,,holidays,flyers,,g5-holiday-03,Kỳ nghỉ hè,🏖️
+multiple_choice,Holidays,5,listening,Nghe và chọn nơi bạn ấy đã đến,🏖️|🏔️|🏙️,🏔️,,We went to the mountains.,,mountains = núi,holidays,flyers,,g5-holiday-04,Kỳ nghỉ hè,🏖️
+matching,Holidays,5,grammar,Nối động từ với dạng quá khứ,,,swim=swam|eat=ate|see=saw,,,,holidays,flyers,,g5-holiday-05,Kỳ nghỉ hè,🏖️
+fill_in_blank,Holidays,5,grammar,Yesterday I ___ (visit) my grandma.,,visited,,,,visit thêm -ed ở quá khứ,holidays,flyers,,g5-holiday-06,Kỳ nghỉ hè,🏖️
+multiple_choice,Health,5,vocabulary,🤒 What's the matter? I have a ___.,fever|fish|fan,fever,,,,fever = sốt,health,flyers,,g5-health-01,Sức khoẻ,🩺
+fill_in_blank,Health,5,grammar,You should ___ to the dentist.,go|goes|going,go,,,,should + động từ nguyên mẫu,health,flyers,,g5-health-02,Sức khoẻ,🩺
+ordering,Health,5,grammar,Sắp xếp thành câu đúng,,You|shouldn't|eat|too|many|sweets,,,,,health,flyers,,g5-health-03,Sức khoẻ,🩺
+multiple_choice,Health,5,listening,Nghe và chọn chỗ bị đau,🦷|👂|🦶,👂,,I have an earache.,,earache = đau tai,health,flyers,,g5-health-04,Sức khoẻ,🩺
+matching,Health,5,vocabulary,Nối triệu chứng với nghĩa,,,headache=đau đầu|cough=ho|sore throat=đau họng,,,,health,flyers,,g5-health-05,Sức khoẻ,🩺
+multiple_choice,Health,5,grammar,She ___ a cold last week.,had|has|have,had,,,,last week là quá khứ: have -> had,health,flyers,,g5-health-06,Sức khoẻ,🩺

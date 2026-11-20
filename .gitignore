@@ -1,0 +1,25 @@
+# Dependencies & builds
+node_modules/
+# Local uploads (STORAGE_DRIVER=local)
+be/uploads/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Secrets — never commit real .env files (the .env.example files are committed)
+.env
+.env.*
+!.env.example
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Personal idea document (not published)
+documents.pdf

@@ -1,0 +1,12 @@
+// Public API of the questions (question bank) feature.
+export { questionsApi } from './api/questions.api'
+export { Pagination } from './components/Pagination'
+export { QuestionFiltersBar } from './components/QuestionFiltersBar'
+export { QuestionForm } from './components/QuestionForm'
+export { QuestionPreview } from './components/QuestionPreview'
+export { useQuestionList } from './hooks/useQuestionList'
+export { QuestionBankPage } from './pages/QuestionBankPage'
+export { QuestionEditorPage } from './pages/QuestionEditorPage'
+export { QuestionImportPage } from './pages/QuestionImportPage'
+export { QUESTION_TYPE_LABELS, SKILL_LABELS } from './types'
+export type { ImportReport, Question, QuestionSkill, YleLevel } from './types'

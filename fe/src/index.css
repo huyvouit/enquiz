@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Use these names in classes (bg-brand, text-ink, ...)
+ * instead of raw palette colours so the theme can change in one place.
+ */
+@theme {
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Baloo 2', 'Nunito', ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand: #4f46e5;
+  --color-brand-dark: #3730a3;
+  --color-brand-soft: #e0e7ff;
+
+  --color-sunny: #facc15;
+  --color-sunny-soft: #fef9c3;
+  --color-grass: #22c55e;
+  --color-grass-soft: #dcfce7;
+  --color-coral: #f43f5e;
+  --color-coral-soft: #ffe4e6;
+  --color-sky: #0ea5e9;
+  --color-sky-soft: #e0f2fe;
+  --color-grape: #a855f7;
+  --color-grape-soft: #f3e8ff;
+
+  --color-ink: #1e1b4b;
+  --color-ink-soft: #64748b;
+  --color-canvas: #fffbeb;
+  --color-surface: #ffffff;
+  --color-line: #e2e8f0;
+
+  --radius-blob: 1.75rem;
+  --shadow-pop: 0 6px 0 0 rgb(0 0 0 / 0.12);
+  --shadow-pop-sm: 0 3px 0 0 rgb(0 0 0 / 0.12);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+    min-height: 100dvh;
+    background-image:
+      radial-gradient(circle at 10% 10%, #fde68a55 0, transparent 30%),
+      radial-gradient(circle at 90% 20%, #c7d2fe66 0, transparent 30%),
+      radial-gradient(circle at 50% 100%, #bbf7d055 0, transparent 35%);
+    background-attachment: fixed;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  :focus-visible {
+    @apply outline-3 outline-offset-2 outline-brand;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
