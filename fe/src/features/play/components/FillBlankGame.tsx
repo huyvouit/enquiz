@@ -12,6 +12,9 @@ import type { PlayQuestion } from '../types'
  * text box. "Kiểm tra" sends the answer.
  * After grading (`correctAnswer` set) the gap turns green or red and the
  * first accepted answer is shown.
+ *
+ * Exam mode (`onChange` given): controlled by `value`, every change is
+ * reported, no "Kiểm tra" button and no grading (plan 4.2).
  */
 export function FillBlankGame({
   question,
@@ -20,6 +23,8 @@ export function FillBlankGame({
   isCorrect,
   disabled = false,
   onSubmit,
+  value: controlledValue,
+  onChange,
 }: {
   question: PlayQuestion
   /** The answer already sent (resume / after grading / preview). */
@@ -27,20 +32,26 @@ export function FillBlankGame({
   correctAnswer?: unknown
   isCorrect?: boolean
   disabled?: boolean
-  onSubmit: (answer: string) => void
+  onSubmit?: (answer: string) => void
+  /** Exam mode: the current answer. */
+  value?: string
+  /** Exam mode: called on every change instead of "Kiểm tra". */
+  onChange?: (answer: string) => void
 }) {
   const [draft, setDraft] = useState(submitted ?? '')
   const reduceMotion = useReducedMotion()
+  const controlled = onChange !== undefined
   const revealed = correctAnswer !== undefined
-  const locked = disabled || revealed || submitted !== undefined
+  const locked = disabled || (!controlled && (revealed || submitted !== undefined))
   const bank = question.options ?? []
-  const value = submitted ?? draft
+  const value = controlled ? (controlledValue ?? '') : (submitted ?? draft)
   const expected = firstAccepted(correctAnswer)
+  const setValue = (next: string) => (onChange ? onChange(next) : setDraft(next))
 
   function pick(word: string) {
     if (locked) return
     playSfx('tap')
-    setDraft((d) => (d === word ? '' : word))
+    setValue(value === word ? '' : word)
   }
 
   return (
@@ -61,10 +72,10 @@ export function FillBlankGame({
         ) : (
           <input
             autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && draft.trim()) onSubmit(draft.trim())
+              if (e.key === 'Enter' && draft.trim() && onSubmit) onSubmit(draft.trim())
             }}
             maxLength={60}
             autoComplete="off"
@@ -110,7 +121,7 @@ export function FillBlankGame({
         </div>
       ) : null}
 
-      {!locked ? (
+      {!locked && !controlled && onSubmit ? (
         <Button size="lg" variant="success" disabled={!draft.trim()} onClick={() => onSubmit(draft.trim())}>
           Kiểm tra ✔
         </Button>

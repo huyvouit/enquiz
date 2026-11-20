@@ -12,6 +12,9 @@ import type { PlayQuestion } from '../types'
  * Tiles are tracked by index so repeated words ("the ... the") work.
  * After grading, each placed tile turns green (right position) or red, and
  * the correct sentence is shown when wrong.
+ *
+ * Exam mode (`onChange` given): controlled by `value`, every tap is
+ * reported, no "Kiểm tra" button and no grading (plan 4.2).
  */
 export function OrderingGame({
   question,
@@ -20,27 +23,37 @@ export function OrderingGame({
   isCorrect,
   disabled = false,
   onSubmit,
+  value,
+  onChange,
 }: {
   question: PlayQuestion
   submitted?: string[]
   correctAnswer?: unknown
   isCorrect?: boolean
   disabled?: boolean
-  onSubmit: (answer: string[]) => void
+  onSubmit?: (answer: string[]) => void
+  /** Exam mode: the pieces placed so far. */
+  value?: string[]
+  /** Exam mode: called on every tap instead of "Kiểm tra". */
+  onChange?: (answer: string[]) => void
 }) {
   const items = question.ordering?.items ?? []
   const reduceMotion = useReducedMotion()
+  const controlled = onChange !== undefined
   // Indexes into `items`, in the order the child placed them.
-  const [placed, setPlaced] = useState<number[]>(() => (submitted ? indexesOf(items, submitted) : []))
+  const [ownPlaced, setPlaced] = useState<number[]>(() => (submitted ? indexesOf(items, submitted) : []))
+  const placed = controlled ? indexesOf(items, value ?? []) : ownPlaced
   const revealed = correctAnswer !== undefined
-  const locked = disabled || revealed || submitted !== undefined
+  const locked = disabled || (!controlled && (revealed || submitted !== undefined))
   const correct = orderedPieces(correctAnswer)
-  const sentence = submitted ?? placed.map((i) => items[i])
+  const sentence = controlled ? placed.map((i) => items[i]) : (submitted ?? placed.map((i) => items[i]))
 
   function place(i: number) {
     if (locked) return
     playSfx('tap')
-    setPlaced((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]))
+    const next = placed.includes(i) ? placed.filter((x) => x !== i) : [...placed, i]
+    if (onChange) onChange(next.map((x) => items[x]))
+    else setPlaced(next)
   }
 
   const tileClass =
@@ -108,7 +121,7 @@ export function OrderingGame({
         </div>
       ) : null}
 
-      {!locked ? (
+      {!locked && !controlled && onSubmit ? (
         <Button
           size="lg"
           variant="success"

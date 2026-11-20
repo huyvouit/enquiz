@@ -19,8 +19,20 @@ function answerText(type: AttemptDetailItem['type'], value: unknown, isKey: bool
   return String(value)
 }
 
-/** One row of the post-quiz review: the student's answer vs. the right one. */
-export function AnswerReview({ item, index }: { item: AttemptDetailItem; index: number }) {
+/**
+ * One row of the post-quiz review: the student's answer vs. the right one.
+ * `answersHidden`: an exam whose answers come after the due date (plan E12),
+ * so only right/wrong and the student's own answer are shown.
+ */
+export function AnswerReview({
+  item,
+  index,
+  answersHidden = false,
+}: {
+  item: AttemptDetailItem
+  index: number
+  answersHidden?: boolean
+}) {
   return (
     <li
       className={cn(
@@ -37,7 +49,9 @@ export function AnswerReview({ item, index }: { item: AttemptDetailItem; index: 
         </p>
       </div>
 
-      {item.type === 'matching' ? (
+      {item.type === 'matching' && answersHidden ? (
+        <GivenPairs given={asPairs(item.studentAnswer)} />
+      ) : item.type === 'matching' ? (
         <MatchingReview given={asPairs(item.studentAnswer)} correct={asPairs(item.correctAnswer)} />
       ) : item.type ? (
         <div className="flex flex-wrap gap-x-6 gap-y-1 pl-10 text-sm font-semibold">
@@ -47,7 +61,7 @@ export function AnswerReview({ item, index }: { item: AttemptDetailItem; index: 
               {answerText(item.type, item.studentAnswer, false)}
             </span>
           </span>
-          {!item.isCorrect ? (
+          {!item.isCorrect && !answersHidden ? (
             <span>
               {item.type === 'ordering' ? 'Câu đúng' : 'Đáp án đúng'}:{' '}
               <span className="text-green-700">{answerText(item.type, item.correctAnswer, true)}</span>
@@ -60,6 +74,19 @@ export function AnswerReview({ item, index }: { item: AttemptDetailItem; index: 
         <p className="pl-10 text-sm text-ink-soft">💡 {item.explanation}</p>
       ) : null}
     </li>
+  )
+}
+
+function GivenPairs({ given }: { given: MatchPair[] }) {
+  if (given.length === 0) return <p className="pl-10 text-sm font-semibold">Em trả lời: (bỏ qua)</p>
+  return (
+    <ul className="flex flex-wrap gap-2 pl-10 text-sm font-semibold">
+      {given.map((p) => (
+        <li key={p.left} className="rounded-lg bg-white px-2.5 py-1">
+          {p.left} ↔ {p.right}
+        </li>
+      ))}
+    </ul>
   )
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/shared/lib/cn'
 import { formatDateTime } from '@/shared/lib/format'
+import { useNow } from '../hooks/useNow'
 import { STATE_META, STATE_ORDER } from '../lib/states'
 import type { AssignmentDetail, SubmissionState } from '../types'
 import { StateChip } from './StateParts'
@@ -11,6 +12,7 @@ export function SubmissionTable({ detail }: { detail: AssignmentDetail }) {
   const [filter, setFilter] = useState<SubmissionState | 'all'>('all')
   const rows = detail.submissions.filter((r) => filter === 'all' || r.state === filter)
   const count = (s: SubmissionState) => detail.submissions.filter((r) => r.state === s).length
+  const now = useNow(15_000)
 
   return (
     <div className="flex flex-col gap-3">
@@ -45,7 +47,22 @@ export function SubmissionTable({ detail }: { detail: AssignmentDetail }) {
                   <div className="text-xs text-ink-soft">{r.student.username}</div>
                 </td>
                 <td className="px-3 py-2">
-                  <StateChip state={r.state} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <StateChip state={r.state} />
+                    {r.inProgress ? (
+                      <span className="rounded-full bg-sky-soft px-2 py-0.5 text-xs font-bold text-sky-800">
+                        ✍️ Đang làm · còn {minutesLeft(r.inProgress.deadlineAt, now)} phút
+                      </span>
+                    ) : null}
+                    {r.isAutoSubmit ? (
+                      <span
+                        className="rounded-full bg-sunny-soft px-2 py-0.5 text-xs font-bold text-yellow-800"
+                        title="Hết giờ, hệ thống đã tự nộp bài"
+                      >
+                        ⏱ Tự nộp
+                      </span>
+                    ) : null}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-right font-display text-lg font-bold">{r.score ?? '–'}</td>
                 <td className="px-3 py-2">{r.submittedAt ? formatDateTime(r.submittedAt) : '–'}</td>
@@ -71,6 +88,11 @@ export function SubmissionTable({ detail }: { detail: AssignmentDetail }) {
       </div>
     </div>
   )
+}
+
+/** Whole minutes left before an exam's deadline, never negative. */
+function minutesLeft(deadlineAt: string, now: number): number {
+  return Math.max(0, Math.ceil((new Date(deadlineAt).getTime() - now) / 60_000))
 }
 
 function FilterChip({

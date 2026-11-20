@@ -22,12 +22,15 @@ export function MultipleChoiceGame({
   onChange,
   disabled = false,
   correctAnswer,
+  selectedIcon = '⏳',
 }: {
   options: string[]
   value: string | undefined
   onChange: (option: string) => void
   disabled?: boolean
   correctAnswer?: string
+  /** Mark of the chosen option before grading: ⏳ in practice, ✔️ in exams. */
+  selectedIcon?: string
 }) {
   const revealed = correctAnswer !== undefined
   return (
@@ -67,7 +70,7 @@ export function MultipleChoiceGame({
             )}
           >
             <span aria-hidden className="text-2xl">
-              {isRight ? '✅' : isWrongPick ? '❌' : selected ? '⏳' : SHAPES[i % SHAPES.length]}
+              {isRight ? '✅' : isWrongPick ? '❌' : selected ? selectedIcon : SHAPES[i % SHAPES.length]}
             </span>
             {option}
           </motion.button>

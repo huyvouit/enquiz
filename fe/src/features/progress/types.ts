@@ -41,8 +41,19 @@ export interface AttemptProgression {
   unlockedQuiz: QuizRef | null
 }
 
+/** classic: practice (map or homework). exam: timed test (plan 4.2). */
+export type AttemptMode = 'classic' | 'exam'
+
 export interface AttemptResult {
   attemptId: string
+  mode: AttemptMode
+  /** Exam handed in by the timer or by the server after the deadline. */
+  isAutoSubmit: boolean
+  /**
+   * Exam whose teacher shows answers after the due date: correct answers and
+   * explanations are left out until then (ISO date). null = shown.
+   */
+  answersHiddenUntil: string | null
   quizId: string
   quizTitle: string | null
   coverEmoji: string | null
@@ -65,6 +76,7 @@ export interface AttemptSummary {
   totalQuestions: number
   passed: boolean
   xpEarned: number
+  mode: AttemptMode
   completedAt: string
   student?: { id: string; fullName: string; username: string }
 }

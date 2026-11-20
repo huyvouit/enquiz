@@ -9,9 +9,10 @@ import {
   useUpdateAssignment,
 } from '../hooks/useAssignments'
 import { useNow } from '../hooks/useNow'
+import { examLabel } from '../lib/play-path'
 import { targetLabel } from '../lib/states'
 import { countdown, formatDue, fromVnInputs, toVnInputs } from '../lib/vn-time'
-import type { AssignmentView } from '../types'
+import type { AssignmentView, RevealPolicy } from '../types'
 import { AssignDialog } from './AssignDialog'
 import { CountsBar, DueDateInput } from './StateParts'
 
@@ -102,6 +103,7 @@ function AssignmentRow({ assignment: a, onExtend }: { assignment: AssignmentView
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-display text-lg font-bold">{a.quiz?.title ?? '(Quiz đã bị xoá)'}</span>
           <Badge tone="grape">{targetLabel(a.target, a.counts.assigned)}</Badge>
+          {a.mode === 'exam' ? <Badge tone="sky">{examLabel(a)}</Badge> : null}
           {closed ? <Badge tone="neutral">🔒 Đã đóng</Badge> : null}
         </div>
         <div className="text-sm text-ink-soft">
@@ -173,6 +175,8 @@ function ExtendForm({ assignment, onClose }: { assignment: AssignmentView; onClo
       ? toVnInputs(current)
       : { date: toVnInputs(new Date(Date.now() + 86_400_000)).date, time: '20:00' }
   })
+  const [reveal, setReveal] = useState<RevealPolicy>(assignment.reveal)
+  const isExam = assignment.mode === 'exam'
   const dueDate = fromVnInputs(due.date, due.time)
   const dueError = !dueDate
     ? 'Hãy chọn ngày và giờ'
@@ -189,6 +193,33 @@ function ExtendForm({ assignment, onClose }: { assignment: AssignmentView; onClo
       <p className="text-sm text-ink-soft">
         Đổi hạn sẽ tự tính lại trạng thái: bài nộp trước hạn mới được tính là đúng hạn.
       </p>
+      {isExam ? (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-sm font-bold">📝 Cho xem đáp án bài kiểm tra</legend>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ['after_submit', 'Ngay sau khi nộp'],
+                ['after_due', 'Sau hạn nộp'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={reveal === value}
+                onClick={() => setReveal(value)}
+                className={
+                  reveal === value
+                    ? 'min-h-11 rounded-xl border-2 border-brand bg-brand-soft px-3 py-2 text-sm font-bold text-brand-dark'
+                    : 'min-h-11 rounded-xl border-2 border-line bg-surface px-3 py-2 text-sm font-bold hover:border-brand'
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
       {update.error ? <ErrorBox message={errorMessage(update.error)} /> : null}
       <div className="flex justify-end gap-3">
         <Button variant="secondary" onClick={onClose}>
@@ -200,12 +231,18 @@ function ExtendForm({ assignment, onClose }: { assignment: AssignmentView; onClo
           onClick={() =>
             dueDate &&
             update.mutate(
-              { id: assignment.id, payload: { dueDate: dueDate.toISOString() } },
+              {
+                id: assignment.id,
+                payload: {
+                  dueDate: dueDate.toISOString(),
+                  ...(isExam && reveal !== assignment.reveal ? { reveal } : {}),
+                },
+              },
               { onSuccess: onClose },
             )
           }
         >
-          Lưu hạn mới
+          {isExam ? 'Lưu' : 'Lưu hạn mới'}
         </Button>
       </div>
     </div>

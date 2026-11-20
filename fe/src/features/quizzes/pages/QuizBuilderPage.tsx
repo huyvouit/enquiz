@@ -33,8 +33,13 @@ interface BuilderState {
   coverEmoji: string
   published: boolean
   shuffleQuestions: boolean
+  /** Suggested exam time in minutes, as typed ('' = none). */
+  examMinutes: string
   questions: Question[]
 }
+
+/** Same bounds as the exam time in the assign dialog (1–90 minutes). */
+const EXAM_MAX_MINUTES = 90
 
 const EMPTY: BuilderState = {
   title: '',
@@ -44,6 +49,7 @@ const EMPTY: BuilderState = {
   coverEmoji: '📘',
   published: true,
   shuffleQuestions: false,
+  examMinutes: '',
   questions: [],
 }
 
@@ -56,6 +62,7 @@ function fromDetail(q: QuizDetail): BuilderState {
     coverEmoji: q.coverEmoji,
     published: q.status === 'published',
     shuffleQuestions: q.settings.shuffleQuestions,
+    examMinutes: q.settings.timeLimitSec ? String(Math.round(q.settings.timeLimitSec / 60)) : '',
     questions: q.questions,
   }
 }
@@ -93,6 +100,11 @@ function QuizBuilderForm({ id, existing }: { id?: string; existing?: QuizDetail 
       setError('Hãy thêm ít nhất 1 câu hỏi vào quiz')
       return
     }
+    const minutes = state.examMinutes.trim() === '' ? null : Number(state.examMinutes)
+    if (minutes !== null && !(Number.isInteger(minutes) && minutes >= 1 && minutes <= EXAM_MAX_MINUTES)) {
+      setError(`Thời gian gợi ý phải từ 1 đến ${EXAM_MAX_MINUTES} phút (hoặc để trống)`)
+      return
+    }
     setError(null)
     setSaving(true)
     const payload: QuizPayload = {
@@ -103,7 +115,10 @@ function QuizBuilderForm({ id, existing }: { id?: string; existing?: QuizDetail 
       coverEmoji: state.coverEmoji,
       questionIds: state.questions.map((q) => q.id),
       status: state.published ? 'published' : 'draft',
-      settings: { shuffleQuestions: state.shuffleQuestions },
+      settings: {
+        shuffleQuestions: state.shuffleQuestions,
+        timeLimitSec: minutes === null ? null : minutes * 60,
+      },
     }
     try {
       if (id) await quizzesApi.update(id, payload)
@@ -198,6 +213,21 @@ function QuizBuilderForm({ id, existing }: { id?: string; existing?: QuizDetail 
                   label="Xáo trộn câu hỏi"
                 />
               </div>
+              <Field
+                label="⏱ Thời gian gợi ý khi giao bài kiểm tra (phút)"
+                hint="Không bắt buộc. Để trống thì mặc định 15 phút."
+              >
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={EXAM_MAX_MINUTES}
+                  className="w-32!"
+                  placeholder="15"
+                  value={state.examMinutes}
+                  onChange={(e) => set('examMinutes', e.target.value)}
+                />
+              </Field>
             </Card>
 
             <Card>

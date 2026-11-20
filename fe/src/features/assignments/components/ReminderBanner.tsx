@@ -6,7 +6,7 @@ import { cn } from '@/shared/lib/cn'
 import { playSfx } from '@/shared/sound'
 import { useReminders } from '../hooks/useAssignments'
 import { useNow } from '../hooks/useNow'
-import { playPath } from '../lib/play-path'
+import { examAction, examLabel, playPath } from '../lib/play-path'
 import { countdown, vnDayKey } from '../lib/vn-time'
 import type { MyAssignment } from '../types'
 
@@ -123,6 +123,7 @@ export function ReminderBanner() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 font-bold">
                       {a.quiz?.title ?? '(Bài đã bị xoá)'}
+                      {a.mode === 'exam' ? <Badge tone="sky">{examLabel(a)}</Badge> : null}
                       {kind === 'fresh' ? <Badge tone="grape">✨ Mới</Badge> : null}
                     </div>
                     <div className="text-sm text-ink-soft">
@@ -138,7 +139,7 @@ export function ReminderBanner() {
                       to={playPath(a)}
                       className="flex min-h-11 items-center rounded-xl bg-grass px-4 py-2 font-bold text-white shadow-pop-sm hover:brightness-95"
                     >
-                      {kind === 'overdue' ? '✏️ Làm bù' : '▶ Làm ngay'}
+                      {a.mode === 'exam' ? examAction(a) : kind === 'overdue' ? '✏️ Làm bù' : '▶ Làm ngay'}
                     </Link>
                   ) : null}
                 </li>

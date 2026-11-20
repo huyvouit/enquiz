@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { Card, Mascot } from '@/shared/components'
-import { formatDuration, starsForScore } from '@/shared/lib/format'
+import { formatDateTime, formatDuration, starsForScore } from '@/shared/lib/format'
 import type { AttemptResult } from '../types'
 import { AnswerReview } from './AnswerReview'
 import { ProgressionPanel } from './ProgressionPanel'
@@ -14,7 +14,11 @@ const CHEERS = [
   'Xuất sắc! Em là siêu sao tiếng Anh! 🏆',
 ] as const
 
-/** Score header + per-question review. Used right after submitting and from history. */
+/**
+ * Score header + per-question review. Used right after submitting, from
+ * history and after an exam. Exams (plan 4.2) earn no XP, so the
+ * progression panel is replaced by a short note.
+ */
 export function ResultView({
   result,
   actions,
@@ -46,16 +50,33 @@ export function ResultView({
         <p className="font-bold text-ink-soft">
           Đúng {result.correctCount}/{result.totalQuestions} câu · {formatDuration(result.durationSec)}
         </p>
-        <ProgressionPanel progression={result.progression} score={result.score} fresh={fresh} />
+        {result.mode === 'exam' ? (
+          <p className="rounded-2xl bg-sky-soft px-4 py-2 font-semibold">
+            📝 Bài kiểm tra
+            {result.isAutoSubmit ? ' · ⏱ Hết giờ, bài được tự nộp' : ''}
+          </p>
+        ) : (
+          <ProgressionPanel progression={result.progression} score={result.score} fresh={fresh} />
+        )}
         <Mascot mood={stars >= 2 ? 'cheer' : 'happy'} message={CHEERS[stars]} />
         {actions ? <div className="flex flex-wrap justify-center gap-3">{actions}</div> : null}
       </Card>
 
       <section>
         <h2 className="mb-3 text-2xl font-bold">Xem lại bài làm</h2>
+        {result.answersHiddenUntil ? (
+          <p className="mb-3 rounded-2xl bg-sunny-soft px-4 py-3 font-semibold">
+            🔒 Đáp án đúng và lời giải thích sẽ hiện sau hạn nộp ({formatDateTime(result.answersHiddenUntil)}).
+          </p>
+        ) : null}
         <ol className="flex flex-col gap-3">
           {result.details.map((item, i) => (
-            <AnswerReview key={item.questionId} item={item} index={i} />
+            <AnswerReview
+              key={item.questionId}
+              item={item}
+              index={i}
+              answersHidden={result.answersHiddenUntil !== null}
+            />
           ))}
         </ol>
       </section>

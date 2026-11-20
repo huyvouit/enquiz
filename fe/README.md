@@ -34,6 +34,7 @@ src/
     ├── progress/    # 05, 07, 08 – kết quả, lịch sử, bản đồ, xếp hạng
     ├── classes/     # 10 – lớp học, nhóm, tạo học sinh hàng loạt, vào lớp bằng mã
     ├── assignments/ # 11 – giao bài, nhắc nhở, bài tập của em
+    ├── exam/        # 14 – phòng thi: đồng hồ, đánh dấu, rà soát, nộp bài
     └── analytics/   # 12 – thống kê, bản đồ nhiệt, báo cáo, xuất file
 ```
 
@@ -49,6 +50,7 @@ Import alias: `@/` = `src/` (ví dụ `import { Button } from '@/shared/componen
 | `/history` | Học sinh | Bài đã làm |
 | `/leaderboard` | Mọi vai trò | Bảng xếp hạng |
 | `/play/:quizId` | Mọi vai trò | Chơi quiz (giáo viên: xem thử) |
+| `/exam/:assignmentId` | Học sinh | Bài kiểm tra: giới thiệu → phòng thi → kết quả (toàn màn hình, ngoài `AppLayout`) |
 | `/attempts/:attemptId` | Học sinh / giáo viên | Kết quả & xem lại |
 | `/teacher` | Giáo viên/Admin | Dashboard quiz |
 | `/teacher/questions[/new\|/:id/edit]` | Giáo viên/Admin | Kho câu hỏi |

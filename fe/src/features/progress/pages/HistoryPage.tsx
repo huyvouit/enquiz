@@ -37,7 +37,14 @@ export function HistoryPage() {
                 <p className="truncate font-bold">{a.quizTitle ?? 'Bài quiz đã bị xoá'}</p>
                 <p className="text-sm text-ink-soft">{formatDateTime(a.completedAt)}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  {a.passed ? <Badge tone="grass">✓ Vượt trạm</Badge> : <Badge tone="neutral">Chưa đạt</Badge>}
+                  {/* Exams never pass a station or earn XP (plan E4). */}
+                  {a.mode === 'exam' ? (
+                    <Badge tone="sky">📝 Kiểm tra</Badge>
+                  ) : a.passed ? (
+                    <Badge tone="grass">✓ Vượt trạm</Badge>
+                  ) : (
+                    <Badge tone="neutral">Chưa đạt</Badge>
+                  )}
                   {a.xpEarned > 0 ? <Badge tone="grape">⚡ +{a.xpEarned} XP</Badge> : null}
                 </div>
               </div>
