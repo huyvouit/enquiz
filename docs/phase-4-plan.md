@@ -270,7 +270,7 @@ student_progress.mode, isAutoSubmit    // E7
 
 ### Kết quả 4.0
 
-> Ngày: 2026-11-20 · Nhánh `feat/4.0-deploy` (**chưa commit**) · Trạng thái: **code xong, chờ dựng hạ tầng**
+> Ngày: 2026-11-20 · [PR #1](https://github.com/huyvouit/enquiz/pull/1) đã merge vào `main` (merge commit `d260d26`) · Trạng thái: **code xong, chờ dựng hạ tầng**
 
 **Đã làm**
 
@@ -293,17 +293,16 @@ student_progress.mode, isAutoSubmit    // E7
   - Tạo mới: thành công, mật khẩu sinh ra khớp với hash đã lưu.
   - Trùng tên: không sửa gì.
 - Với chỉ các dependency production, `dist` nạp được đủ mọi module.
-- **Chưa kiểm tra:**
-  - Image Docker chưa build lần nào (máy dev không có Docker). CI sẽ build.
-  - CI chưa chạy trên GitHub.
+- **CI trên GitHub:** lần chạy đầu trên PR #1 xanh cả 3 job: backend, frontend, và docker. Đây cũng là lần đầu image Cloud Run được build, nên Dockerfile với npm 11 đã được xác nhận.
+- **Chưa kiểm tra:** image chưa chạy trên Cloud Run thật; các bước kiểm tra sau deploy (`deploy.md` mục 6) chưa làm.
 
 **Phát hiện và đã sửa trong lúc làm**
 - `node:22` đi kèm npm 10, trong khi project yêu cầu npm ≥ 11. Dockerfile và CI đã cài npm 11.
 - Thiếu `.gcloudignore` thì `gcloud builds submit` sẽ tải `be/.env` lên Cloud Build. Đã thêm file này.
 - Binary MongoDB của test nằm ở `node_modules/.cache`, không phải `~/.cache`. CI đặt `MONGOMS_DOWNLOAD_DIR` cố định để cache đúng chỗ.
+- Fine-grained token GitHub dùng cho `gh` phải có các quyền sau trên repo: **Contents**, **Workflows** (để push `.github/workflows/`), và **Pull requests** (để `gh pr create`), tất cả ở mức Read and write.
 
 **Còn lại để đóng 4.0**
-- Commit, push nhánh, mở PR để CI chạy lần đầu.
 - Dựng hạ tầng theo `deploy.md` và chạy hết mục 6 (kiểm tra sau deploy). Trong đó có kết quả thử `@nestjs/storage` để chốt D18.
 - Sentry và backup Atlas.
 - Đồng ý của phụ huynh trước khi mở cho trường thật.
