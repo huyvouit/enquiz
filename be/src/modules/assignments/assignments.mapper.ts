@@ -3,9 +3,26 @@ import type { Quiz } from '../quizzes/schemas/quiz.schema.js';
 import type { Submission, SubmissionCounts } from './assignment-status.js';
 import type {
   Assignment,
+  AssignmentMode,
   AssignmentStatus,
   AssignmentTargetKind,
+  RevealPolicy,
 } from './schemas/assignment.schema.js';
+
+/** Exam settings shown with every homework (plan 4.2). */
+export interface ExamSettingsView {
+  mode: AssignmentMode;
+  /** Exam only. */
+  timeLimitSec: number | null;
+  reveal: RevealPolicy;
+}
+
+/** The student's exam session for one homework, if started. */
+export interface ExamProgressRef {
+  state: 'in_progress' | 'submitted';
+  sessionId: string;
+  deadlineAt: Date;
+}
 
 export type AssignmentDoc = Assignment & { _id: Types.ObjectId };
 /** The quiz fields homework views need. */
@@ -25,7 +42,7 @@ export interface AssignmentQuizRef {
 }
 
 /** One homework in the teacher's list, with live submission counts. */
-export interface AssignmentView {
+export interface AssignmentView extends ExamSettingsView {
   id: string;
   classId: string;
   quiz: AssignmentQuizRef | null;
@@ -40,6 +57,8 @@ export interface AssignmentView {
 
 export interface SubmissionRow extends Submission {
   student: { id: string; fullName: string; username: string };
+  /** Exam being taken right now. */
+  inProgress: { deadlineAt: Date } | null;
 }
 
 /** The teacher's submission table for one homework. */
@@ -49,7 +68,7 @@ export interface AssignmentDetail extends AssignmentView {
 }
 
 /** A homework as the student sees it. */
-export interface MyAssignment extends Submission {
+export interface MyAssignment extends Submission, ExamSettingsView {
   id: string;
   classId: string;
   className: string;
@@ -64,6 +83,8 @@ export interface MyAssignment extends Submission {
   isNew: boolean;
   /** Not submitted, due within 48 hours. */
   dueSoon: boolean;
+  /** Exam homework: the student's session, null when not started. */
+  exam: ExamProgressRef | null;
 }
 
 /** Compact payload for the student home page banner and header badge. */
@@ -73,6 +94,15 @@ export interface ReminderView {
   overdue: MyAssignment[];
   dueSoon: MyAssignment[];
   fresh: MyAssignment[];
+}
+
+export function examSettingsOf(a: AssignmentDoc): ExamSettingsView {
+  const mode = a.mode ?? ('classic' as AssignmentMode);
+  return {
+    mode,
+    timeLimitSec: mode === 'exam' ? (a.timeLimitSec ?? null) : null,
+    reveal: a.reveal ?? ('after_submit' as RevealPolicy),
+  };
 }
 
 export function toQuizRef(q: QuizDoc | undefined): AssignmentQuizRef | null {

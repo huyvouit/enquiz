@@ -9,6 +9,18 @@ export enum AssignmentStatus {
 
 export type AssignmentTargetKind = 'class' | 'group' | 'students';
 
+/** classic: practice with instant feedback. exam: timed test (plan 4.2). */
+export enum AssignmentMode {
+  CLASSIC = 'classic',
+  EXAM = 'exam',
+}
+
+/** When an exam shows the correct answers to students (plan E12). */
+export enum RevealPolicy {
+  AFTER_SUBMIT = 'after_submit',
+  AFTER_DUE = 'after_due',
+}
+
 /** Who the homework was given to, kept for display ("Nhóm cần kèm"). */
 @Schema({ _id: false })
 export class AssignmentTarget {
@@ -66,6 +78,26 @@ export class Assignment {
     default: AssignmentStatus.ACTIVE,
   })
   status: AssignmentStatus;
+
+  /** Missing on homework given before phase 4.2: read as classic. */
+  @Prop({
+    type: String,
+    enum: Object.values(AssignmentMode),
+    default: AssignmentMode.CLASSIC,
+  })
+  mode: AssignmentMode;
+
+  /** Exam only: time for one attempt, in seconds (plan E6). */
+  @Prop({ type: Number })
+  timeLimitSec?: number;
+
+  /** Exam only (plan E12). Missing = after_submit. */
+  @Prop({
+    type: String,
+    enum: Object.values(RevealPolicy),
+    default: RevealPolicy.AFTER_SUBMIT,
+  })
+  reveal: RevealPolicy;
 
   /** Message from the teacher shown to students. */
   @Prop({ type: String, trim: true })

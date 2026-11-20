@@ -42,6 +42,7 @@ export class GetMyHistoryHandler implements IQueryHandler<GetMyHistoryQuery> {
         totalQuestions: a.totalQuestions,
         passed: a.passed ?? false,
         xpEarned: a.xpEarned ?? 0,
+        mode: a.mode ?? 'classic',
         completedAt: a.completedAt,
       };
     });

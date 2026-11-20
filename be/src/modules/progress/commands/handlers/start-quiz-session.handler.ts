@@ -1,7 +1,12 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CommandHandler, ICommandHandler, QueryBus } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ActiveExamOnQuizQuery } from '../../../exams/queries/impl/exam.queries.js';
 import { Question } from '../../../questions/schemas/question.schema.js';
 import { AssignmentPlayAccessQuery } from '../../../assignments/queries/impl/assignment.queries.js';
 import { assertCanSeeQuiz } from '../../../quizzes/quiz-access.js';
@@ -41,6 +46,17 @@ export class StartQuizSessionHandler implements ICommandHandler<StartQuizSession
           'Trạm này chưa mở khoá. Em hãy vượt qua trạm trước nhé! 🔒',
         );
       }
+    }
+
+    // No practice of a quiz while its exam is open: it would show answers (E11).
+    if (
+      await this.queryBus.execute(
+        new ActiveExamOnQuizQuery(user.userId, quiz._id.toString()),
+      )
+    ) {
+      throw new ConflictException(
+        'Em đang làm bài kiểm tra của bài này. Làm xong rồi luyện tập nhé!',
+      );
     }
 
     const key = {

@@ -1,4 +1,5 @@
 import {
+  answersHiddenUntil,
   averageScore,
   countStates,
   isDueSoon,
@@ -36,6 +37,7 @@ describe('submissionOf', () => {
       submittedAt: at('2026-11-18T01:00:00Z'),
       attempts: 3,
       attemptId: null,
+      isAutoSubmit: false,
     });
   });
 
@@ -86,5 +88,24 @@ describe('summaries', () => {
     expect(isDueSoon(due, at('2026-11-18T14:00:00Z'))).toBe(true);
     expect(isDueSoon(due, at('2026-11-18T12:00:00Z'))).toBe(false);
     expect(isDueSoon(due, after)).toBe(false);
+  });
+
+  it('hides exam answers until the due date only when asked to', () => {
+    const exam = { mode: 'exam', reveal: 'after_due', dueDate: due };
+    expect(answersHiddenUntil(exam, before)).toEqual(due);
+    expect(answersHiddenUntil(exam, after)).toBeNull();
+    expect(
+      answersHiddenUntil({ ...exam, reveal: 'after_submit' }, before),
+    ).toBeNull();
+    expect(answersHiddenUntil({ ...exam, mode: 'classic' }, before)).toBeNull();
+  });
+
+  it('reports an auto-submitted exam', () => {
+    const s = submissionOf(
+      due,
+      [{ score: 30, completedAt: before, isAutoSubmit: true }],
+      before,
+    );
+    expect(s.isAutoSubmit).toBe(true);
   });
 });

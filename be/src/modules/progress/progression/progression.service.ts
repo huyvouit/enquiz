@@ -22,6 +22,12 @@ import {
 
 type QuizDoc = Quiz & { _id: Types.ObjectId };
 
+/**
+ * Exams never count for the quest map, XP or levels (plan E4). Homework and
+ * analytics queries, on the other hand, include them.
+ */
+export const PRACTICE_ONLY = { mode: { $ne: 'exam' } } as const;
+
 export interface Station {
   quiz: QuizDoc;
   status: StationStatus;
@@ -65,6 +71,7 @@ export class ProgressionService {
   ): Promise<Map<string, StationProgress>> {
     const match: Record<string, unknown> = {
       studentId: new Types.ObjectId(studentId),
+      ...PRACTICE_ONLY,
     };
     if (quizIds) match.quizId = { $in: quizIds };
     const rows = await this.progressModel.aggregate<{
@@ -163,6 +170,7 @@ export class ProgressionService {
     const passedBefore = await this.progressModel.distinct('quizId', {
       studentId: studentOid,
       passed: true,
+      ...PRACTICE_ONLY,
     });
     const levelAfter = levelFromPassedCount(
       passedBefore.length + (leveledUp ? 1 : 0),

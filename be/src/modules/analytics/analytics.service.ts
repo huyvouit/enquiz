@@ -620,7 +620,11 @@ export class AnalyticsService {
   // ---------- Shared helpers ----------
 
   /** Earliest attempt per (student, quiz) among those matching `match`. */
-  private firstAttempts(match: Record<string, unknown>): Promise<AttemptRow[]> {
+  private async firstAttempts(
+    match: Record<string, unknown>,
+  ): Promise<AttemptRow[]> {
+    // Exams past their deadline count as handed in (plan E5).
+    await this.submissions.closeExpiredExams();
     return this.progressModel.aggregate<AttemptRow>([
       { $match: match },
       { $sort: { completedAt: 1, _id: 1 } },

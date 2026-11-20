@@ -14,6 +14,7 @@ import { AssignmentsModule } from './modules/assignments/assignments.module.js';
 import { authThrottlers } from './modules/auth/auth-throttle.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { ClassesModule } from './modules/classes/classes.module.js';
+import { ExamsModule } from './modules/exams/exams.module.js';
 import { ProgressModule } from './modules/progress/progress.module.js';
 import { QuestionsModule } from './modules/questions/questions.module.js';
 import { QuizzesModule } from './modules/quizzes/quizzes.module.js';
@@ -45,6 +46,7 @@ import { UsersModule } from './modules/users/users.module.js';
     QuizzesModule,
     ProgressModule,
     AssignmentsModule,
+    ExamsModule,
     AnalyticsModule,
     UploadsModule,
     SeedModule,

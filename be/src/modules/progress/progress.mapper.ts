@@ -9,6 +9,7 @@ import type {
 import type { QuizSession } from './schemas/quiz-session.schema.js';
 import type {
   AnswerDetail,
+  AttemptMode,
   StudentProgress,
 } from './schemas/student-progress.schema.js';
 
@@ -56,6 +57,13 @@ export interface AttemptProgression {
 /** Returned by POST /progress/sessions/:id/finish and GET /progress/attempts/:id. */
 export interface AttemptResult {
   attemptId: string;
+  mode: AttemptMode;
+  isAutoSubmit: boolean;
+  /**
+   * Exam with "show answers after the due date" (plan E12): correct answers,
+   * explanations and transcripts are left out until then. null = shown.
+   */
+  answersHiddenUntil: Date | null;
   quizId: string;
   /** null when the quiz has since been deleted. */
   quizTitle: string | null;
@@ -80,6 +88,7 @@ export interface AttemptSummary {
   totalQuestions: number;
   passed: boolean;
   xpEarned: number;
+  mode: AttemptMode;
   completedAt: Date;
   student?: { id: string; fullName: string; username: string };
 }
@@ -121,6 +130,9 @@ export function toAttemptResult(
   const byId = new Map(questions.map((q) => [q._id.toString(), q]));
   return {
     attemptId: progress._id.toString(),
+    mode: progress.mode ?? 'classic',
+    isAutoSubmit: progress.isAutoSubmit ?? false,
+    answersHiddenUntil: null,
     quizId: progress.quizId.toString(),
     quizTitle: quiz?.title ?? null,
     coverEmoji: quiz?.coverEmoji ?? null,
@@ -148,5 +160,23 @@ export function toAttemptResult(
         audioUrl: q?.audioUrl,
       };
     }),
+  };
+}
+
+/** Removes what would give the answers away until `until` (plan E12). */
+export function hideAnswers(
+  result: AttemptResult,
+  until: Date | null,
+): AttemptResult {
+  if (!until) return result;
+  return {
+    ...result,
+    answersHiddenUntil: until,
+    details: result.details.map((d) => ({
+      ...d,
+      correctAnswer: null,
+      explanation: undefined,
+      audioText: undefined,
+    })),
   };
 }

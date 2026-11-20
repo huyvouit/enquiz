@@ -19,6 +19,9 @@ export class AnswerDetail {
 }
 export const AnswerDetailSchema = SchemaFactory.createForClass(AnswerDetail);
 
+/** classic: practice (map or homework). exam: timed test (plan 4.2). */
+export type AttemptMode = 'classic' | 'exam';
+
 /** One finished attempt of one quiz by one student. */
 @Schema({ collection: 'student_progress' })
 export class StudentProgress {
@@ -71,6 +74,17 @@ export class StudentProgress {
   /** Student level right after this attempt. */
   @Prop({ type: Number, default: 1 })
   levelAfter: number;
+
+  /**
+   * Missing on attempts before phase 4.2: read as classic. Exam attempts
+   * never earn XP, level up or open stations (plan E4).
+   */
+  @Prop({ type: String, enum: ['classic', 'exam'], default: 'classic' })
+  mode: AttemptMode;
+
+  /** Exam handed in by the timer or by the server after the deadline. */
+  @Prop({ type: Boolean, default: false })
+  isAutoSubmit: boolean;
 
   /** Server-measured time from session start to finish, in seconds. */
   @Prop({ type: Number })
