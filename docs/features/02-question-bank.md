@@ -10,7 +10,8 @@ Kho câu hỏi dùng chung cho mọi giáo viên. Giáo viên tạo câu hỏi m
 2. Tạo/sửa câu hỏi ở `/teacher/questions/new` hoặc ngay trong màn tạo quiz (modal):
    - Chọn dạng → phần đáp án đổi theo dạng (xem bảng dưới).
    - **Tải ảnh** (PNG/JPG/WebP ≤ 1 MB) hoặc dán link https.
-   - **Câu đọc to bằng tiếng Anh** (tuỳ chọn) + nút ▶ Nghe thử; có nội dung này thì kỹ năng tự chuyển sang **Nghe** (trừ khi giáo viên đã tự chọn kỹ năng).
+   - **Câu đọc to bằng tiếng Anh** (tuỳ chọn) + nút ▶ Nghe thử; có nội dung này thì kỹ năng tự chuyển sang **Nghe** (trừ khi giáo viên đã tự chọn kỹ năng). Khi lưu, server tạo file MP3 bằng text-to-speech (D16); ô này báo **✅ Đã có âm thanh** / **⚠️ Chưa tạo được** / "sẽ tạo khi lưu". Trước khi lưu, Nghe thử dùng giọng của máy giáo viên.
+   - Admin thấy thanh **🔇 N câu nghe chưa có âm thanh → 🔊 Tạo âm thanh** trong Kho câu hỏi (tạo bù theo lô 25 câu).
    - **Phân loại** (tuỳ chọn): nhãn, cấp độ Cambridge (Starters/Movers/Flyers), bài SGK.
 3. Xoá câu hỏi chỉ được khi không quiz nào đang dùng nó.
 
@@ -46,7 +47,8 @@ Kho câu hỏi dùng chung cho mọi giáo viên. Giáo viên tạo câu hỏi m
 | `skill` | `vocabulary` \| `grammar` \| `listening`; mặc định `listening` nếu có `audioText` |
 | `questionText` | điền từ: chứa đúng một `___` (mọi chuỗi ≥ 3 dấu `_` được chuẩn hoá về `___`) |
 | `mediaUrl?` | link http(s) hoặc ảnh đã upload `/api/v1/uploads/images/<uuid>.png` |
-| `audioText?` | câu tiếng Anh trình duyệt đọc to (≤ 200 ký tự) |
+| `audioText?` | câu tiếng Anh của câu nghe (≤ 200 ký tự); **chỉ giáo viên thấy** |
+| `audioUrl?` | MP3 do text-to-speech tạo từ `audioText` lúc lưu; thiếu = chưa tạo được. Khoá file = băm nội dung + giọng, nên lưu lại cùng câu không tạo file mới |
 | `explanation?` | hiện cho học sinh khi trả lời sai |
 | `options: string[]` | trắc nghiệm: các lựa chọn · điền từ: từ gợi ý (không bắt buộc) |
 | `correctAnswer: Mixed` | trắc nghiệm: chuỗi · điền từ: `string[]` đáp án chấp nhận · sắp xếp: `string[]` đúng thứ tự |
@@ -80,7 +82,7 @@ Kho câu hỏi dùng chung cho mọi giáo viên. Giáo viên tạo câu hỏi m
 - **Chặn xoá câu đang dùng** (409) thay vì xoá lan; kiểm tra qua `CountQuizzesUsingQuestionQuery` trên QueryBus.
 - **Điền từ có từ gợi ý tuỳ chọn**: trẻ lớp 1–3 gõ phím chậm và hay sai chính tả không phải lỗi kiến thức → cho chạm chọn từ; lớp 4–5 tắt gợi ý để luyện viết.
 - **Body API dùng `acceptedAnswers` / `orderedItems`** thay vì nhồi vào `correctAnswer`: kiểm tra kiểu rõ ràng bằng class-validator; khi lưu vẫn gộp về `correctAnswer`.
-- **Giọng đọc của trình duyệt** thay cho file âm thanh: không tốn lưu trữ, giáo viên chỉ gõ chữ (quyết định D11). Đổi lại `audioText` có trong dữ liệu chơi (xem "Tồn đọng").
+- **Text-to-speech ở server, tạo khi lưu** (D16, thay phần Nghe của D11): giáo viên vẫn chỉ gõ chữ, học sinh chỉ nhận `audioUrl` nên không lộ đáp án; âm thanh giống nhau trên mọi máy. TTS lỗi hoặc tắt thì câu vẫn được lưu, admin tạo bù sau (`POST /questions/audio/backfill`).
 
 ## Kiểm thử
 - Unit: `question-content.validator.spec.ts` (chỗ trống, đáp án trùng, từ gợi ý, sắp xếp).
@@ -88,6 +90,5 @@ Kho câu hỏi dùng chung cho mọi giáo viên. Giáo viên tạo câu hỏi m
 - e2e `phase3.e2e-spec.ts` nhóm `new question types, listening and images`: upload ảnh (415 khi giả đuôi, 413 khi quá cỡ, 403 với học sinh, chặn đường dẫn lạ), tạo điền từ/sắp xếp/câu nghe, link `javascript:` → 400.
 
 ## Hướng mở rộng / còn tồn đọng
-- `audioText` gửi xuống máy học sinh để đọc to → với câu "nghe và chọn từ" có thể lộ đáp án nếu mở công cụ dev. Khắc phục: dựng file âm thanh ở server.
 - Upload file âm thanh thật (giọng giáo viên).
 - Admin duyệt câu hỏi trước khi chia sẻ cho cả trường.

@@ -1,6 +1,6 @@
 # Kế hoạch Giai đoạn 4 – Lên production, dọn nợ, Exam Mode & UX
 
-> Trạng thái: **Đang triển khai** · 4.0: code xong, chờ dựng hạ tầng · 4.1–4.3: chưa bắt đầu · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
+> Trạng thái: **Đang triển khai** · 4.0, 4.1: code xong, chờ dựng hạ tầng · 4.2–4.3: chưa bắt đầu · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
 
 Bản nháp lộ trình ban đầu đặt Giai đoạn 4 là "Cải thiện UX/DX, Exam Mode & Dọn nợ nền tảng", còn việc deploy để tận Giai đoạn 6. Khi rà soát, có ba lý do khiến deploy phải lên trước:
 - Đáp án câu nghe đang bị lộ qua `audioText`.
@@ -68,20 +68,19 @@ Quyết định chung đánh số tiếp từ Giai đoạn 3 (D12…). Quyết �
 - Không sửa tài khoản đã tồn tại.
 - Không làm endpoint "tạo admin" trên API.
 
-### D16. Câu nghe – **đề xuất** (thay phần "Nghe" của D11)
-- Server sinh file âm thanh từ `audioText` bằng TTS (ví dụ Google Cloud Text-to-Speech), lưu vào Cloud Storage. Client chỉ nhận URL, không nhận chữ.
-- Giáo viên không phải thu âm. Âm thanh giống nhau trên mọi máy, không còn phụ thuộc máy có giọng tiếng Anh hay không.
-- **Cần chốt:**
-  - Sinh lúc lưu câu hỏi hay lúc chơi lần đầu (cache)?
-  - Câu hỏi cũ sinh bù bằng script.
-  - Chi phí TTS ước tính theo số câu (~300 câu chuẩn + câu giáo viên).
+### D16. Câu nghe: text-to-speech ở server, tạo khi lưu – **đã chốt** (thay phần "Nghe" của D11)
+- Server sinh MP3 từ `audioText` bằng **Google Cloud Text-to-Speech** (REST, khoá API chỉ cho phép TTS; không thêm thư viện). File lưu qua storage như ảnh, thư mục `audio/`.
+- Học sinh chỉ nhận `audioUrl`, **không bao giờ** nhận `audioText`. Giáo viên vẫn thấy và sửa chữ.
+- **Tạo khi lưu** câu hỏi (form và nhập CSV), không tạo lúc chơi: học sinh không phải chờ, và lỗi TTS không lộ ra lúc chơi.
+- **TTS lỗi hoặc tắt** (`TTS_DRIVER=none`): câu vẫn được lưu, chỉ thiếu `audioUrl`. Học sinh thấy "Chưa nghe được câu này". Admin tạo bù trong Kho câu hỏi (`POST /questions/audio/backfill`, mỗi lần 25 câu để không vượt 60 giây của Firebase Hosting).
+- **Khoá file = băm(ngôn ngữ, giọng, tốc độ, nội dung):** lưu lại cùng câu không tạo file mới; đổi chữ hoặc đổi giọng thì tạo file mới; tên file không lộ nội dung.
+- Không làm "giáo viên upload file âm thanh" ở giai đoạn này.
+- **Chi phí:** vài trăm câu, mỗi câu vài chục ký tự, nên nằm trong hạn mức miễn phí hằng tháng của Text-to-Speech (theo bảng giá Google, cần kiểm tra lại khi bật).
 
-### D17. Tạo học sinh hàng loạt – **đề xuất**
-- **Đề xuất:** xoá bù. Nếu bước thêm vào lớp lỗi thì xoá các tài khoản vừa tạo rồi báo lỗi.
-- **Lý do:**
-  - Transaction đòi dev và e2e chuyển sang `MongoMemoryReplSet` (chậm hơn, khác môi trường hiện tại).
-  - Lỗi này hiếm: chỉ một bước ghi sau `insertMany`.
-- **Phương án khác:** transaction thật. Atlas đã là replica set, chỉ cần đổi môi trường dev/test.
+### D17. Tạo học sinh hàng loạt: xoá bù – **đã chốt**
+- Nếu bước thêm vào lớp (hoặc thêm vào bài tập) lỗi sau khi đã tạo tài khoản: gỡ khỏi lớp, gỡ khỏi bài tập, xoá các tài khoản vừa tạo, rồi báo lỗi gốc.
+- **Lý do không dùng transaction:** dev và e2e phải chuyển sang `MongoMemoryReplSet`, trong khi lỗi này hiếm.
+- **Khe còn lại:** nếu server sập đúng giữa hai bước thì vẫn sót tài khoản. Chấp nhận được; dữ liệu Atlas đã là replica set nếu sau này cần transaction.
 
 ### D18. Thư viện lưu file – **đề xuất**
 - Thử `@nestjs/storage` với bucket thật ở 4.0.
@@ -148,12 +147,14 @@ Code đã xong; xem [Kết quả 4.0](#kết-quả-40). Phần hạ tầng làm 
 
 ### 4.1 Bảo mật & nợ kỹ thuật
 
+Code xong; xem [Kết quả 4.1](#kết-quả-41).
+
 1. **Câu nghe (D16):**
    - Mỗi câu có `audioText` được gắn thêm `audioUrl`.
    - `get-play-quiz` và mapper trả `audioUrl`, **bỏ `audioText`** khỏi dữ liệu gửi cho học sinh. Giáo viên vẫn thấy chữ khi soạn.
    - `ListenButton` phát file thay cho Web Speech. Không có file thì hiện "Chưa có âm thanh".
-   - Viết script sinh bù cho câu cũ.
-2. **Tạo học sinh hàng loạt (D17):** thêm bước xoá bù; e2e giả lập lỗi bước cập nhật lớp.
+   - Sinh bù cho câu cũ bằng nút của admin (endpoint theo lô), thay cho script chạy từ máy local.
+2. **Tạo học sinh hàng loạt (D17):** thêm bước xoá bù; unit test giả lập lỗi bước cập nhật lớp.
 3. **Thư viện lưu file (D18):** chỉ làm nếu thử ở 4.0 không chạy được.
 4. **TanStack Query:** chuyển 14 file `useAsync`, rồi xoá `useAsync`.
 
@@ -306,3 +307,35 @@ student_progress.mode, isAutoSubmit    // E7
 - Dựng hạ tầng theo `deploy.md` và chạy hết mục 6 (kiểm tra sau deploy). Trong đó có kết quả thử `@nestjs/storage` để chốt D18.
 - Sentry và backup Atlas.
 - Đồng ý của phụ huynh trước khi mở cho trường thật.
+
+### Kết quả 4.1
+
+> Ngày: 2026-11-20 · Nhánh `feat/4.1-security-debt` (chưa commit) · Trạng thái: **code xong**; D18 chờ thử bucket thật ở 4.0
+
+**Đã làm**
+
+| Việc | Chi tiết | File chính |
+| --- | --- | --- |
+| Câu nghe không lộ đáp án (D16) | Lưu câu hỏi (form, CSV) thì sinh MP3 bằng Google Cloud Text-to-Speech, lưu vào storage `audio/`. Học sinh nhận `audioUrl` (hoặc `audioPending` khi chưa có), **không còn `audioText`**. Driver `none` / `google` / `fake`. Khoá file theo băm nội dung + giọng | `be/src/modules/audio/*`, `uploads/audio-storage.ts`, `quizzes.mapper.ts`, `get-play-quiz.handler.ts` |
+| Tạo bù âm thanh | Admin: `GET /questions/audio/status`, `POST /questions/audio/backfill` (25 câu/lần). Thanh "🔇 N câu nghe chưa có âm thanh → 🔊 Tạo âm thanh" trong Kho câu hỏi | `questions/audio-backfill.ts`, `AudioBackfillBanner.tsx` |
+| Giao diện câu nghe | `ListenButton` phát file MP3; thiếu file thì báo cho học sinh và hướng dẫn giáo viên. Ô soạn câu đọc báo trạng thái: đã có / chưa tạo được / sẽ tạo khi lưu | `ListenButton.tsx`, `MediaEditor.tsx` |
+| Nhập lại CSV xoá trường để trống | Trước đây `$set` bỏ qua giá trị rỗng nên trường cũ còn nguyên. Nay các trường tuỳ chọn và nội dung theo dạng câu được `$unset` (bỏ `audioText` thì mất luôn âm thanh cũ) | `question-import.service.ts` |
+| Xoá bù khi tạo học sinh hàng loạt (D17) | Lỗi ở bước thêm vào lớp hoặc bài tập: gỡ khỏi lớp, gỡ khỏi bài tập, xoá tài khoản vừa tạo, báo lỗi gốc | `class-roster.handlers.ts` |
+| Bỏ `useAsync` | 12 file (trang và component) chuyển sang TanStack Query. Mỗi feature có `hooks/queries.ts` (key, hook, `invalidate…()`). Thao tác ghi xoá cache liên quan (nộp bài → bản đồ, lịch sử, kết quả, bảng xếp hạng, bài tập). Form sửa nạp chi tiết với `gcTime: 0`. Xoá `shared/hooks/useAsync.ts` | `features/{questions,progress,quizzes}/hooks/queries.ts`, `play.api.ts` |
+| Tài liệu | Biến `TTS_*` trong `.env.example` và `be/README.md`; `deploy.md` thêm khoá TTS, secret, bước "Tạo âm thanh" và kiểm tra; tài liệu 02, 04; quy tắc TanStack trong README | — |
+
+**Kết quả kiểm tra**
+- Backend: lint, prettier sạch; **60 unit** test pass (13 mới: tạo âm thanh, request gửi Google, lỗi không lộ khoá, `audioPending`, xoá bù); **47 e2e** test pass (3 mới: đổi/bỏ chữ thì đổi/bỏ âm thanh, chỉ admin tạo bù, nhập lại CSV xoá âm thanh); build thành công.
+- e2e xác nhận: dữ liệu chơi **không chứa** chữ của câu đọc; file âm thanh tải được với `audio/mpeg`.
+- Frontend: lint và build sạch.
+- **Chưa kiểm tra:**
+  - Gọi Google Text-to-Speech thật (cần khoá API, làm ở 4.0); giọng `en-GB` mặc định chưa được nghe thử.
+  - Chưa chạy thử giao diện trên trình duyệt: phát âm thanh, thanh tạo bù, và các màn hình đã chuyển sang TanStack Query (đặc biệt: sau khi nộp bài, bản đồ và lịch sử phải cập nhật ngay).
+
+**Phát hiện và đã sửa trong lúc làm**
+- Nhập lại CSV không xoá được trường đã để trống (lỗi có từ Giai đoạn 3), sẽ làm âm thanh cũ còn lại sau khi bỏ câu đọc.
+- Thêm cờ `audioPending`: không có nó, câu nghe chưa có âm thanh sẽ mất hẳn nút nghe mà học sinh không biết vì sao.
+
+**Còn lại**
+- D18: kết quả thử `@nestjs/storage` với Cloud Storage thật (4.0).
+- Chạy thử trên trình duyệt các màn đã chuyển sang TanStack Query.
