@@ -39,8 +39,13 @@ export interface PlayQuestion {
   type: QuestionType;
   questionText: string;
   mediaUrl?: string;
-  /** Read aloud by the browser (listening). */
-  audioText?: string;
+  /**
+   * Listening: the recorded audio. Never the text (`audioText`), which often
+   * is the answer (plan D16). Missing while the audio is not made yet.
+   */
+  audioUrl?: string;
+  /** Listening question whose audio is not made yet: the game says so. */
+  audioPending?: true;
   /** multiple_choice: shuffled choices. fill_in_blank: shuffled word bank (if any). */
   options?: string[];
   /** matching: left column in authored order, right column shuffled. */
@@ -84,6 +89,7 @@ export type PlayableQuestionDoc = Pick<
   | 'questionText'
   | 'mediaUrl'
   | 'audioText'
+  | 'audioUrl'
   | 'options'
   | 'pairs'
   | 'correctAnswer'
@@ -95,7 +101,9 @@ export function toPlayQuestion(q: PlayableQuestionDoc): PlayQuestion {
     type: q.type,
     questionText: q.questionText,
     mediaUrl: q.mediaUrl,
-    audioText: q.audioText,
+    audioUrl: q.audioUrl,
+    // audioText is read only to know a listening question lacks its audio.
+    ...(q.audioText && !q.audioUrl ? { audioPending: true as const } : {}),
   };
   switch (q.type) {
     case QuestionType.MULTIPLE_CHOICE:

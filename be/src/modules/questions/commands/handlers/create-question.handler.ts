@@ -1,6 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { QuestionAudioService } from '../../../audio/question-audio.service.js';
 import { assertValidQuestionContent } from '../../question-content.validator.js';
 import { questionFieldsFromDto } from '../../question-fields.js';
 import { QuestionView, toQuestionView } from '../../questions.mapper.js';
@@ -11,12 +12,15 @@ import { CreateQuestionCommand } from '../impl/create-question.command.js';
 export class CreateQuestionHandler implements ICommandHandler<CreateQuestionCommand> {
   constructor(
     @InjectModel(Question.name) private readonly questionModel: Model<Question>,
+    private readonly audio: QuestionAudioService,
   ) {}
 
   async execute({ dto, user }: CreateQuestionCommand): Promise<QuestionView> {
     const content = assertValidQuestionContent(dto);
+    const fields = questionFieldsFromDto(dto);
     const created = await this.questionModel.create({
-      ...questionFieldsFromDto(dto),
+      ...fields,
+      audioUrl: await this.audio.urlFor(fields.audioText),
       ...content,
       createdBy: new Types.ObjectId(user.userId),
     });

@@ -37,7 +37,9 @@ export class GetPlayQuizHandler implements IQueryHandler<GetPlayQuizQuery> {
           type: 1,
           questionText: 1,
           mediaUrl: 1,
+          // audioText only flags listening questions without audio; never sent.
           audioText: 1,
+          audioUrl: 1,
           options: 1,
           pairs: 1,
           // Only to scramble ordering pieces; toPlayQuestion never returns it.

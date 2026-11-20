@@ -34,6 +34,9 @@ Quy tắc chung, cách chạy và danh sách tính năng: xem [README gốc](../
 | `STORAGE_DRIVER` | `local` | Nơi lưu ảnh câu hỏi: `local` hoặc `s3` (S3, R2, MinIO…) |
 | `UPLOAD_DIR` | `uploads` | `local`: thư mục lưu ảnh (đã `.gitignore`) |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_PUBLIC_URL` | — | `s3`: bucket và URL công khai; khoá lấy từ `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |
+| `TTS_DRIVER` | `none` | Âm thanh câu nghe (D16): `none` (không tạo), `google` (Cloud Text-to-Speech), `fake` (chỉ cho test). Ảnh và âm thanh dùng chung `STORAGE_DRIVER`, thư mục `images/` và `audio/` |
+| `GOOGLE_TTS_API_KEY` | — | Bắt buộc khi `google`; khoá chỉ cho phép Text-to-Speech API |
+| `TTS_LANGUAGE`, `TTS_VOICE` | `en-GB`, rỗng | Ngôn ngữ giọng đọc; tên giọng cụ thể (tuỳ chọn) |
 
 Biến được kiểm tra lúc khởi động ở `src/config/env.validation.ts`; thiếu/sai thì server dừng kèm thông báo rõ ràng.
 

@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AudioModule } from '../audio/audio.module.js';
+import {
+  BackfillAudioHandler,
+  GetAudioStatusHandler,
+} from './audio-backfill.js';
 import { CreateQuestionHandler } from './commands/handlers/create-question.handler.js';
 import { DeleteQuestionHandler } from './commands/handlers/delete-question.handler.js';
 import { UpdateQuestionHandler } from './commands/handlers/update-question.handler.js';
@@ -15,6 +20,7 @@ import { Question, QuestionSchema } from './schemas/question.schema.js';
 @Module({
   imports: [
     CqrsModule,
+    AudioModule,
     MongooseModule.forFeature([
       { name: Question.name, schema: QuestionSchema },
     ]),
@@ -29,6 +35,8 @@ import { Question, QuestionSchema } from './schemas/question.schema.js';
     ListTopicsHandler,
     QuestionImportService,
     ImportQuestionsHandler,
+    GetAudioStatusHandler,
+    BackfillAudioHandler,
   ],
   // Quizzes (validate ids, play view) and Progress (grading) read questions.
   // seed:content reuses the importer.

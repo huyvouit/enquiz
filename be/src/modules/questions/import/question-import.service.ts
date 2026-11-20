@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Role } from '../../../common/enums/role.enum.js';
 import type { AuthUser } from '../../../common/types/auth-user.js';
+import { QuestionAudioService } from '../../audio/question-audio.service.js';
 import { questionFieldsFromDto } from '../question-fields.js';
 import { Question } from '../schemas/question.schema.js';
 import { csvRecords } from './csv.js';
@@ -61,6 +62,35 @@ const dupKey = (q: {
   ]).toLowerCase();
 
 /**
+ * Re-imports replace the question: a column left empty clears the field
+ * (Mongoose drops `undefined` from `$set`), so e.g. removing `audioText`
+ * also removes the old audio.
+ */
+const RESETTABLE = [
+  'mediaUrl',
+  'audioText',
+  'audioUrl',
+  'explanation',
+  'unit',
+  'yleLevel',
+  // Content depends on the type; a re-import may change the type.
+  'options',
+  'pairs',
+  'correctAnswer',
+];
+function setAndUnset(doc: object) {
+  const $set: Record<string, unknown> = {};
+  const $unset: Record<string, ''> = {};
+  for (const [k, v] of Object.entries(doc)) {
+    if (v !== undefined) $set[k] = v;
+  }
+  for (const k of RESETTABLE) {
+    if ($set[k] === undefined) $unset[k] = '';
+  }
+  return Object.keys($unset).length ? { $set, $unset } : { $set };
+}
+
+/**
  * Imports questions from CSV with the same rules as the form (plan 3.5).
  * Admin rows become system questions (createdBy = null) and may carry an
  * externalId (re-imports update them); teacher rows go to the teacher's bank.
@@ -69,6 +99,7 @@ const dupKey = (q: {
 export class QuestionImportService {
   constructor(
     @InjectModel(Question.name) private readonly questionModel: Model<Question>,
+    private readonly audio: QuestionAudioService,
   ) {}
 
   async import(
@@ -209,11 +240,17 @@ export class QuestionImportService {
       }));
     if (dryRun) return { report, saved: [] };
 
+    // Listening audio is made before saving (plan D16); failures leave it empty.
+    await this.audio.fill(
+      [...toCreate, ...toUpdate].map(
+        (x) => x.doc as { audioText?: string; audioUrl?: string },
+      ),
+    );
     const inserted = await this.questionModel.insertMany(
       toCreate.map((x) => x.doc),
     );
     for (const u of toUpdate) {
-      await this.questionModel.updateOne({ _id: u.id }, { $set: u.doc });
+      await this.questionModel.updateOne({ _id: u.id }, setAndUnset(u.doc));
     }
     const saved: SavedRow[] = [
       ...toCreate.map(({ row }, i) => ({ row, id: inserted[i]._id })),
