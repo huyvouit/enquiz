@@ -170,6 +170,10 @@ export interface SubmissionRow {
   submittedAt: string | null
   attempts: number
   attemptId: string | null
+  /** Exam handed in by the timer or by the server (plan 4.2). */
+  isAutoSubmit: boolean
+  /** Exam being taken right now. */
+  inProgress: { deadlineAt: string } | null
 }
 
 export interface AssignmentDetail {
@@ -189,6 +193,9 @@ export interface AssignmentDetail {
   status: 'active' | 'closed'
   note: string | null
   createdAt: string
+  mode: 'classic' | 'exam'
+  timeLimitSec: number | null
+  reveal: 'after_submit' | 'after_due'
   counts: SubmissionCounts
   averageScore: number | null
   submissions: SubmissionRow[]

@@ -4,6 +4,7 @@ import { Model, QueryFilter, Types } from 'mongoose';
 import { byVietnameseName } from '../../../classes/classes.mapper.js';
 import { ClassAccessQuery } from '../../../classes/queries/impl/class-membership.queries.js';
 import { ClassRoom } from '../../../classes/schemas/class-room.schema.js';
+import { ExamSessionStatesQuery } from '../../../exams/queries/impl/exam.queries.js';
 import { User } from '../../../users/schemas/user.schema.js';
 import { loadManagedAssignment } from '../../assignment-access.js';
 import { isDueSoon, isNew } from '../../assignment-status.js';
@@ -11,6 +12,7 @@ import { AssignmentSubmissionsService } from '../../assignment-submissions.servi
 import {
   AssignmentDetail,
   AssignmentView,
+  examSettingsOf,
   MyAssignment,
   ReminderView,
   toQuizRef,
@@ -78,9 +80,15 @@ export class GetAssignmentDetailHandler implements IQueryHandler<GetAssignmentDe
       assignmentId,
       user,
     );
-    const [[view], index, students] = await Promise.all([
+    // attempts() closes expired exams first, so read sessions after it.
+    const index = await this.submissions.attempts([assignment._id]);
+    const [[view], sessions, students] = await Promise.all([
       this.submissions.views([assignment]),
-      this.submissions.attempts([assignment._id]),
+      assignment.mode === 'exam'
+        ? this.queryBus.execute(
+            new ExamSessionStatesQuery([assignment._id.toString()]),
+          )
+        : Promise.resolve([]),
       this.userModel
         .find(
           { _id: { $in: assignment.studentIds } },
@@ -89,6 +97,11 @@ export class GetAssignmentDetailHandler implements IQueryHandler<GetAssignmentDe
         .lean(),
     ]);
     const subs = this.submissions.submissions(assignment, index);
+    const taking = new Map(
+      sessions
+        .filter((s) => s.status === 'in_progress')
+        .map((s) => [s.studentId, s.deadlineAt]),
+    );
     const rows = students
       .map((s) => ({
         student: {
@@ -97,6 +110,9 @@ export class GetAssignmentDetailHandler implements IQueryHandler<GetAssignmentDe
           username: s.username,
         },
         ...subs.get(s._id.toString())!,
+        inProgress: taking.has(s._id.toString())
+          ? { deadlineAt: taking.get(s._id.toString())! }
+          : null,
       }))
       .sort((a, b) => byVietnameseName(a.student, b.student));
     return { ...view, className: classAccess.name, submissions: rows };
@@ -109,6 +125,7 @@ async function myAssignments(
   classModel: Model<ClassRoom>,
   userModel: Model<User>,
   submissions: AssignmentSubmissionsService,
+  queryBus: QueryBus,
   studentId: string,
   onlyActive: boolean,
 ): Promise<MyAssignment[]> {
@@ -122,11 +139,17 @@ async function myAssignments(
     .lean();
   if (assignments.length === 0) return [];
 
-  const [index, quizzes, classes] = await Promise.all([
-    submissions.attempts(
-      assignments.map((a) => a._id),
-      sid,
-    ),
+  const index = await submissions.attempts(
+    assignments.map((a) => a._id),
+    sid,
+  );
+  const examIds = assignments
+    .filter((a) => a.mode === 'exam')
+    .map((a) => a._id.toString());
+  const [sessions, quizzes, classes] = await Promise.all([
+    examIds.length > 0
+      ? queryBus.execute(new ExamSessionStatesQuery(examIds, studentId))
+      : Promise.resolve([]),
     submissions.quizzes(assignments.map((a) => a.quizId)),
     classModel
       .find(
@@ -147,8 +170,10 @@ async function myAssignments(
     ).map((t) => [t._id.toString(), t.fullName]),
   );
 
+  const sessionOf = new Map(sessions.map((s) => [s.assignmentId, s]));
   const now = new Date();
   return assignments.map((a) => {
+    const session = sessionOf.get(a._id.toString());
     const submission = submissions.submissions(a, index, now).get(studentId)!;
     const c = classById.get(a.classId.toString());
     const notSubmitted = submission.score === null;
@@ -165,6 +190,15 @@ async function myAssignments(
       closed: a.status === AssignmentStatus.CLOSED,
       isNew: notSubmitted && isNew(a.createdAt, now),
       dueSoon: notSubmitted && isDueSoon(a.dueDate, now),
+      ...examSettingsOf(a),
+      exam: session
+        ? {
+            state:
+              session.status === 'in_progress' ? 'in_progress' : 'submitted',
+            sessionId: session.sessionId,
+            deadlineAt: session.deadlineAt,
+          }
+        : null,
     };
   });
 }
@@ -177,6 +211,7 @@ export class MyAssignmentsHandler implements IQueryHandler<MyAssignmentsQuery> {
     @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly submissions: AssignmentSubmissionsService,
+    private readonly queryBus: QueryBus,
   ) {}
 
   execute({ user }: MyAssignmentsQuery): Promise<MyAssignment[]> {
@@ -185,6 +220,7 @@ export class MyAssignmentsHandler implements IQueryHandler<MyAssignmentsQuery> {
       this.classModel,
       this.userModel,
       this.submissions,
+      this.queryBus,
       user.userId,
       false,
     );
@@ -199,6 +235,7 @@ export class MyRemindersHandler implements IQueryHandler<MyRemindersQuery> {
     @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly submissions: AssignmentSubmissionsService,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async execute({ user }: MyRemindersQuery): Promise<ReminderView> {
@@ -208,6 +245,7 @@ export class MyRemindersHandler implements IQueryHandler<MyRemindersQuery> {
         this.classModel,
         this.userModel,
         this.submissions,
+        this.queryBus,
         user.userId,
         true,
       )

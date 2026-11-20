@@ -179,3 +179,4 @@ fe/src/
 | 11 | Bài tập về nhà & hạn chót, nhắc nhở | 3 | [11-assignments.md](docs/features/11-assignments.md) |
 | 12 | Thống kê & phân tích cho giáo viên, xuất Excel/PDF | 3 | [12-teacher-analytics.md](docs/features/12-teacher-analytics.md) |
 | 13 | Nhập câu hỏi từ CSV, nội dung chuẩn | 3 | [13-question-import.md](docs/features/13-question-import.md) |
+| 14 | Chế độ Kiểm tra (Exam Mode): phòng thi, đồng hồ, lưu nháp, chấm khi nộp | 4 | [14-exam-mode.md](docs/features/14-exam-mode.md) |

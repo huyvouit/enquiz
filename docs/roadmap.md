@@ -26,11 +26,11 @@ Kế hoạch, quyết định D1–D11 (đã chốt): **[phase-3-plan.md](phase-
 - [x] 3.5 → [13](features/13-question-import.md) Kho câu hỏi chuẩn Cambridge Starters/Movers/Flyers; nhập CSV; admin sắp thứ tự trạm
 
 ## ✨ Giai đoạn 4 – Lên production, dọn nợ, Exam Mode & UX
-Kế hoạch, quyết định D12–D18 và E1–E8, kết quả từng mốc: **[phase-4-plan.md](phase-4-plan.md)** · Hướng dẫn deploy: **[deploy.md](deploy.md)**.
+Kế hoạch, quyết định D12–D18 và E1–E13, kết quả từng mốc: **[phase-4-plan.md](phase-4-plan.md)** · Hướng dẫn deploy: **[deploy.md](deploy.md)**.
 Thứ tự: **4.0 → 4.1 → 4.2**; 4.3 làm song song được sau 4.0.
 - [ ] 4.0 Deploy & hạ tầng: Firebase Hosting + Cloud Run + Atlas + Cloud Storage (D12); CI; giới hạn đăng nhập theo username/IP (D14); `create:admin` (D15). **Code xong** ([kết quả](phase-4-plan.md#kết-quả-40)), chờ dựng hạ tầng
 - [ ] 4.1 Bảo mật & nợ kỹ thuật: câu nghe dùng text-to-speech ở server, không lộ `audioText` (D16); xoá bù khi tạo học sinh hàng loạt lỗi (D17); bỏ `useAsync`. **Code xong** ([kết quả](phase-4-plan.md#kết-quả-41)); thư viện lưu file (D18) chờ thử bucket thật
-- [ ] 4.2 Exam Mode (E1–E8): đếm giờ ở server, Previous/Next, rà soát & đánh dấu, 1 lượt, tự nộp khi hết giờ, không cộng XP/mở trạm
+- [x] 4.2 Exam Mode (E1–E13, [tài liệu 14](features/14-exam-mode.md)): đếm giờ ở server, Previous/Next, rà soát & đánh dấu, lưu nháp lên server, 1 lượt, hết giờ chấm nháp, không cộng XP/mở trạm, cho xem đáp án ngay hoặc sau hạn
 - [ ] 4.3 UX & thao tác giáo viên: chạm trên tablet, in thẻ đăng nhập, nhân bản câu, CSV mẫu, nổi câu sai nhiều, vị trí cá nhân trên bảng xếp hạng
 
 ## ⚔️ Giai đoạn 5 – Đấu trường trực tuyến

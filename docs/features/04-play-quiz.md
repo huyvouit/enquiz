@@ -72,6 +72,11 @@ Học sinh trả lời từng câu (trắc nghiệm, nối từ, điền từ, s
 - Không còn lưu đáp án ở localStorage: **server là nơi giữ tiến trình** (giai đoạn 1 dùng `usePlayStore`, đã bỏ).
 - Âm thanh qua `playSfx(...)` (tài liệu [09](09-sound-and-effects.md)).
 
+- **Dùng lại trong phòng thi (4.2, tài liệu 14):** `MultipleChoiceGame`, `MatchingGame`, `FillBlankGame`, `OrderingGame` và `QuestionStage` được xuất qua `features/play/index.ts`.
+  - `FillBlankGame` và `OrderingGame` có thêm chế độ điều khiển từ ngoài (`value` + `onChange`): không có nút **Kiểm tra**, báo mỗi lần thay đổi, không chấm.
+  - `MultipleChoiceGame` nhận `selectedIcon` (⏳ khi luyện tập, ✔️ khi kiểm tra).
+- `toPlayQuestion(q, random)` ở backend nhận bộ sinh số ngẫu nhiên: bài kiểm tra truyền bộ có hạt giống `sessionId:questionId` để F5 không đổi chỗ đáp án.
+
 ## Quyết định thiết kế
 - **Phiên ở server thay cho nộp một lần**: muốn phản hồi tức thì mà không lộ đáp án thì server phải chấm từng câu; muốn chống "thử từng đáp án" thì câu trả lời đầu phải bị khoá → cần lưu trạng thái ở server. Endpoint nộp một lần `POST /progress/submit` của giai đoạn 1 **đã bỏ** để không thể vòng qua luật này.
 - Học sinh có thể bỏ phiên, mở phiên mới và làm lại khi đã biết đáp án — chấp nhận được vì làm lại là học; XP chỉ tính phần **cải thiện điểm** nên không "cày" được (tài liệu 07).

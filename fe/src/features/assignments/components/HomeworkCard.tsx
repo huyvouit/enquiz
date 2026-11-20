@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/shared/components'
 import { cn } from '@/shared/lib/cn'
 import { useNow } from '../hooks/useNow'
-import { playPath } from '../lib/play-path'
+import { examAction, examLabel, playPath } from '../lib/play-path'
 import { countdown, formatDue } from '../lib/vn-time'
 import type { MyAssignment } from '../types'
 import { StateChip } from './StateParts'
@@ -13,16 +13,20 @@ export function HomeworkCard({ assignment: a }: { assignment: MyAssignment }) {
   const reduce = useReducedMotion()
   const now = new Date(useNow())
   const submitted = a.score !== null
-  const playable = !a.closed && a.quiz !== null
-  const label = a.closed
-    ? '🔒 Cô đã đóng bài'
-    : !a.quiz
-      ? 'Bài đã bị xoá'
-      : submitted
-        ? '🔁 Làm lại'
-        : a.state === 'missing'
-          ? '✏️ Làm bù'
-          : '▶ Làm ngay'
+  const isExam = a.mode === 'exam'
+  // A started exam stays reachable after closing: finish it, see the result.
+  const playable = a.quiz !== null && (!a.closed || (isExam && a.exam !== null))
+  const label = !a.quiz
+    ? 'Bài đã bị xoá'
+    : !playable
+      ? '🔒 Cô đã đóng bài'
+      : isExam
+        ? examAction(a)
+        : submitted
+          ? '🔁 Làm lại'
+          : a.state === 'missing'
+            ? '✏️ Làm bù'
+            : '▶ Làm ngay'
 
   return (
     <motion.li
@@ -40,6 +44,7 @@ export function HomeworkCard({ assignment: a }: { assignment: MyAssignment }) {
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-display text-xl font-bold">{a.quiz?.title ?? '(Bài đã bị xoá)'}</span>
+          {isExam ? <Badge tone="sky">{examLabel(a)}</Badge> : null}
           {a.isNew ? <Badge tone="grape">✨ Mới</Badge> : null}
           <StateChip state={a.state} />
         </div>

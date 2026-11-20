@@ -63,6 +63,14 @@ Index: `{ studentId, completedAt }`, `{ studentId, quizId, score }`, `{ complete
 - Dữ liệu sai định dạng không bao giờ gây lỗi 500, chỉ tính sai.
 - `score = round(đúng / tổng × 100)`.
 
+### Bài kiểm tra (4.2, tài liệu 14)
+- `student_progress` có thêm `mode` (`classic` | `exam`, thiếu = `classic`) và `isAutoSubmit`.
+- Lượt kiểm tra luôn ghi `xpEarned = 0`, `leveledUp = false`. Mọi truy vấn của `ProgressionService` (điểm cao nhất, qua trạm, cấp độ) lọc `PRACTICE_ONLY = { mode: { $ne: 'exam' } }`, nên bài kiểm tra **không mở trạm, không cộng XP**.
+- Bài tập, thống kê, bản đồ nhiệt và lịch sử vẫn **gồm** bài kiểm tra.
+- `AttemptResult` có thêm `mode`, `isAutoSubmit`, `answersHiddenUntil`. `GET /progress/attempts/:id` ẩn `correctAnswer`, `explanation`, `audioText` với chính học sinh khi giáo viên chọn "cho xem đáp án sau hạn nộp" (hàm `hideAnswers`); giáo viên luôn thấy đủ.
+- `ResultView` (được xuất ra để trang kiểm tra dùng lại) thay bảng XP bằng nhãn "📝 Bài kiểm tra", và hiện dòng "Đáp án sẽ hiện sau hạn nộp" khi cần. `AnswerReview` nhận `answersHidden`.
+- `POST /progress/sessions` trả 409 khi em đang có phiên kiểm tra chưa nộp trên cùng quiz (tránh mở Luyện tập để xem đáp án).
+
 ## Frontend
 - Feature: `fe/src/features/progress/`
 - Route: `/attempts/:attemptId` (`AttemptPage`), `/history` (`HistoryPage`), `/teacher/quizzes/:quizId/results` (`QuizResultsPage`).

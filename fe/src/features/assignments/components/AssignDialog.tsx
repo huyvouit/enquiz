@@ -9,7 +9,7 @@ import { assignmentsApi } from '../api/assignments.api'
 import { useCreateAssignment } from '../hooks/useAssignments'
 import { useNow } from '../hooks/useNow'
 import { defaultDue, formatDue, fromVnInputs } from '../lib/vn-time'
-import type { AssignableQuiz, AssignmentTargetKind, AssignmentView } from '../types'
+import type { AssignableQuiz, AssignmentMode, AssignmentTargetKind, AssignmentView, RevealPolicy } from '../types'
 import { DueDateInput } from './StateParts'
 
 export interface AssignDialogProps {
@@ -25,6 +25,16 @@ export interface AssignDialogProps {
 }
 
 const NOTE_MAX = 200
+/** Exam time limits in minutes (same as the backend, plan E6). */
+const EXAM_MIN_MINUTES = 1
+const EXAM_MAX_MINUTES = 90
+const EXAM_DEFAULT_MINUTES = 15
+
+/** Whole minutes between 1 and 90, or null. */
+function parseExamMinutes(value: string): number | null {
+  const n = Number(value)
+  return Number.isInteger(n) && n >= EXAM_MIN_MINUTES && n <= EXAM_MAX_MINUTES ? n : null
+}
 
 /** Give a quiz as homework to a class, a group or hand-picked students (plan 3.2). */
 export function AssignDialog(props: AssignDialogProps) {
@@ -51,12 +61,25 @@ function AssignForm({ onClose, classDetail, quiz, initialStudentIds, onCreated }
   const cls = classDetail ?? detailQuery.data
 
   const [picked, setPicked] = useState<{ id: string; title: string } | null>(quiz ?? null)
-  const quizTitle = useQuery({
-    queryKey: ['assignments', 'picker', 'quiz', quiz?.id],
-    queryFn: () => assignmentsApi.quizTitle(quiz!.id),
-    enabled: !!quiz && !quiz.title,
+  // Detail of the chosen quiz: its title when only the id is known, the
+  // suggested exam time and whether it is a system quiz (on the map).
+  const pickedDetail = useQuery({
+    queryKey: ['assignments', 'picker', 'quiz', picked?.id],
+    queryFn: () => assignmentsApi.quizTitle(picked!.id),
+    enabled: !!picked,
   })
-  const pickedTitle = picked?.title || quizTitle.data?.title || 'Bài đã chọn'
+  const pickedTitle = picked?.title || pickedDetail.data?.title || 'Bài đã chọn'
+
+  const [mode, setMode] = useState<AssignmentMode>('classic')
+  /** null = not edited: follow the quiz's suggestion. */
+  const [minutesInput, setMinutesInput] = useState<string | null>(null)
+  const [reveal, setReveal] = useState<RevealPolicy>('after_submit')
+  const suggestedSec = pickedDetail.data?.settings?.timeLimitSec
+  const minutesText = minutesInput ?? String(suggestedSec ? Math.round(suggestedSec / 60) : EXAM_DEFAULT_MINUTES)
+  const minutes = parseExamMinutes(minutesText)
+  const minutesError =
+    mode === 'exam' && minutes === null ? `Thời gian từ ${EXAM_MIN_MINUTES} đến ${EXAM_MAX_MINUTES} phút` : null
+  const isSystemQuiz = pickedDetail.data ? pickedDetail.data.author === null : false
 
   const [kind, setKind] = useState<AssignmentTargetKind>(initialStudentIds?.length ? 'students' : 'class')
   const [groupId, setGroupId] = useState('')
@@ -76,7 +99,7 @@ function AssignForm({ onClose, classDetail, quiz, initialStudentIds, onCreated }
 
   const targetReady =
     kind === 'class' ? (cls?.students.length ?? 0) > 0 : kind === 'group' ? !!groupId : studentIds.length > 0
-  const canSubmit = !!cls && !!picked && !dueError && targetReady && !create.isPending
+  const canSubmit = !!cls && !!picked && !dueError && !minutesError && targetReady && !create.isPending
 
   async function submit() {
     if (!cls || !picked || !dueDate) return
@@ -90,6 +113,9 @@ function AssignForm({ onClose, classDetail, quiz, initialStudentIds, onCreated }
             kind === 'group' ? { kind, groupId } : kind === 'students' ? { kind, studentIds } : { kind },
           dueDate: dueDate.toISOString(),
           note: note.trim() || undefined,
+          ...(mode === 'exam' && minutes !== null
+            ? { mode, timeLimitSec: minutes * 60, reveal }
+            : {}),
         },
       })
       onCreated?.(created)
@@ -199,7 +225,63 @@ function AssignForm({ onClose, classDetail, quiz, initialStudentIds, onCreated }
         </fieldset>
       ) : null}
 
-      {/* 4. Due date + note */}
+      {/* 4. Mode (plan 4.2) */}
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-2 text-sm font-bold">Chế độ</legend>
+        <div className="flex flex-wrap gap-2">
+          <Choice active={mode === 'classic'} onClick={() => setMode('classic')}>
+            🎮 Luyện tập
+          </Choice>
+          <Choice active={mode === 'exam'} onClick={() => setMode('exam')}>
+            📝 Kiểm tra
+          </Choice>
+        </div>
+        <span className="text-sm text-ink-soft">
+          {mode === 'classic'
+            ? 'Các em biết đúng/sai ngay sau mỗi câu, được làm lại nhiều lần.'
+            : 'Có giờ làm bài, đi lại giữa các câu, chỉ làm 1 lần, chấm khi nộp. Không cộng XP.'}
+        </span>
+        {mode === 'exam' ? (
+          <div className="flex flex-col gap-3 rounded-2xl border-2 border-sky/40 bg-sky-soft/50 p-3">
+            <Field
+              label="⏱ Thời gian làm bài (phút)"
+              hint={suggestedSec && minutesInput === null ? 'Theo thời gian gợi ý của bài quiz' : undefined}
+            >
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={EXAM_MIN_MINUTES}
+                max={EXAM_MAX_MINUTES}
+                className="w-32!"
+                value={minutesText}
+                onChange={(e) => setMinutesInput(e.target.value)}
+              />
+            </Field>
+            {minutesError ? <span className="-mt-2 text-sm font-bold text-coral">{minutesError}</span> : null}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-bold">Cho xem đáp án</span>
+              <div className="flex flex-wrap gap-2">
+                <Choice active={reveal === 'after_submit'} onClick={() => setReveal('after_submit')}>
+                  Ngay sau khi nộp
+                </Choice>
+                <Choice active={reveal === 'after_due'} onClick={() => setReveal('after_due')}>
+                  Sau hạn nộp
+                </Choice>
+              </div>
+              <span className="text-sm text-ink-soft">
+                Điểm và đúng/sai luôn hiện ngay. "Sau hạn nộp": em nộp trước không chuyển được đáp án cho bạn.
+              </span>
+            </div>
+            {isSystemQuiz ? (
+              <p className="rounded-xl bg-sunny-soft px-3 py-2 text-sm font-semibold">
+                💡 Quiz này có trên bản đồ, học sinh có thể đã luyện trước.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </fieldset>
+
+      {/* 5. Due date + note */}
       <div className="flex flex-col gap-1">
         <DueDateInput date={due.date} time={due.time} onChange={setDue} error={dueError} />
         {dueDate && !dueError ? <span className="text-sm text-ink-soft">Hạn: {formatDue(dueDate)}</span> : null}

@@ -33,7 +33,10 @@ export class GetQuizDetailHandler implements IQueryHandler<GetQuizDetailQuery> {
           ? (authors.get(quiz.createdBy.toString()) ?? null)
           : null,
       ),
-      settings: { shuffleQuestions: quiz.settings?.shuffleQuestions ?? false },
+      settings: {
+        shuffleQuestions: quiz.settings?.shuffleQuestions ?? false,
+        timeLimitSec: quiz.settings?.timeLimitSec ?? null,
+      },
       questions: orderByIds(quiz.questionIds, questions).map(toQuestionView),
     };
   }

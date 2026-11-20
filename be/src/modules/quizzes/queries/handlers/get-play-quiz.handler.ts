@@ -57,7 +57,7 @@ export class GetPlayQuizHandler implements IQueryHandler<GetPlayQuizQuery> {
       topic: quiz.topic,
       gradeLevel: quiz.gradeLevel,
       coverEmoji: quiz.coverEmoji,
-      questions: ordered.map(toPlayQuestion),
+      questions: ordered.map((q) => toPlayQuestion(q)),
     };
   }
 }

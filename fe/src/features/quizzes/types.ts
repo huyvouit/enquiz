@@ -16,7 +16,8 @@ export interface QuizSummary {
 }
 
 export interface QuizDetail extends QuizSummary {
-  settings: { shuffleQuestions: boolean }
+  /** timeLimitSec: suggested time when given as an exam (plan E6); null = none. */
+  settings: { shuffleQuestions: boolean; timeLimitSec: number | null }
   questions: Question[]
 }
 
@@ -29,7 +30,7 @@ export interface QuizPayload {
   coverEmoji?: string
   questionIds: string[]
   status?: QuizStatus
-  settings?: { shuffleQuestions?: boolean }
+  settings?: { shuffleQuestions?: boolean; timeLimitSec?: number | null }
 }
 
 export interface QuizFilters {

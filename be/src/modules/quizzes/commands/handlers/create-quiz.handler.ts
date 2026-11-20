@@ -18,7 +18,10 @@ export function quizFieldsFromDto(dto: QuizDto) {
     gradeLevel: dto.gradeLevel,
     coverEmoji: dto.coverEmoji?.trim() || '📘',
     status: dto.status ?? QuizStatus.PUBLISHED,
-    settings: { shuffleQuestions: dto.settings?.shuffleQuestions ?? false },
+    settings: {
+      shuffleQuestions: dto.settings?.shuffleQuestions ?? false,
+      timeLimitSec: dto.settings?.timeLimitSec ?? null,
+    },
   };
 }
 

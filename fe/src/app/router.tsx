@@ -34,6 +34,8 @@ const AdminUsersPage = lazyPage(() => import('@/features/admin/pages/AdminUsersP
 const MapOrderPage = lazyPage(() => import('@/features/admin/pages/MapOrderPage'), (m) => m.MapOrderPage)
 
 const ClassWorkspacePage = lazyPage(() => import('./ClassWorkspacePage'), (m) => m.default)
+// Student page, but loaded on demand: only exam homework needs it.
+const ExamPage = lazyPage(() => import('@/features/exam/pages/ExamPage'), (m) => m.ExamPage)
 
 const staff: Role[] = ['teacher', 'admin']
 
@@ -49,6 +51,8 @@ export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
   { path: '/login', element: <GuestOnly><LoginPage /></GuestOnly> },
   { path: '/register', element: <GuestOnly><RegisterPage /></GuestOnly> },
+  // Exam room (plan 4.2): full screen, outside AppLayout.
+  { path: '/exam/:assignmentId', element: guarded(['student'], <ExamPage />) },
   {
     element: (
       <RequireAuth>

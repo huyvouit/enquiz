@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   CommandHandler,
   EventBus,
@@ -11,6 +15,8 @@ import {
   ClassAccess,
   ClassAccessQuery,
 } from '../../../classes/queries/impl/class-membership.queries.js';
+import { EXAM_DEFAULT_SEC } from '../../../../common/utils/exam-time.js';
+import { ExamStartedQuery } from '../../../exams/queries/impl/exam.queries.js';
 import { canSeeQuiz } from '../../../quizzes/quiz-access.js';
 import { Quiz } from '../../../quizzes/schemas/quiz.schema.js';
 import {
@@ -23,7 +29,9 @@ import { CreateAssignmentDto } from '../../dto/assignment.dto.js';
 import { AssignmentCreatedEvent } from '../../events/assignment.events.js';
 import {
   Assignment,
+  AssignmentMode,
   AssignmentTarget,
+  RevealPolicy,
 } from '../../schemas/assignment.schema.js';
 import {
   CreateAssignmentCommand,
@@ -57,6 +65,19 @@ function resolveTarget(
     return { target: { kind: 'students' }, studentIds: picked };
   }
   return { target: { kind: 'class' }, studentIds: c.studentIds };
+}
+
+/**
+ * Exam time: the teacher's choice, else the quiz's suggestion, else 15
+ * minutes (plan E6). Classic homework has no time limit.
+ */
+function examTime(
+  mode: AssignmentMode,
+  chosen: number | undefined,
+  quizSuggestion: number | null | undefined,
+): number | undefined {
+  if (mode !== AssignmentMode.EXAM) return undefined;
+  return chosen ?? quizSuggestion ?? EXAM_DEFAULT_SEC;
 }
 
 @CommandHandler(CreateAssignmentCommand)
@@ -94,6 +115,7 @@ export class CreateAssignmentHandler implements ICommandHandler<CreateAssignment
       );
     }
 
+    const mode = dto.mode ?? AssignmentMode.CLASSIC;
     const created = await this.assignmentModel.create({
       classId: new Types.ObjectId(c.id),
       quizId: quiz._id,
@@ -102,6 +124,13 @@ export class CreateAssignmentHandler implements ICommandHandler<CreateAssignment
       studentIds: studentIds.map((id) => new Types.ObjectId(id)),
       dueDate: dto.dueDate,
       note: dto.note?.trim() || undefined,
+      mode,
+      timeLimitSec: examTime(
+        mode,
+        dto.timeLimitSec,
+        quiz.settings?.timeLimitSec,
+      ),
+      reveal: dto.reveal ?? RevealPolicy.AFTER_SUBMIT,
     });
     this.eventBus.publish(
       new AssignmentCreatedEvent(
@@ -120,6 +149,7 @@ export class UpdateAssignmentHandler implements ICommandHandler<UpdateAssignment
   constructor(
     @InjectModel(Assignment.name)
     private readonly assignmentModel: Model<Assignment>,
+    @InjectModel(Quiz.name) private readonly quizModel: Model<Quiz>,
     private readonly queryBus: QueryBus,
     private readonly submissions: AssignmentSubmissionsService,
   ) {}
@@ -142,16 +172,56 @@ export class UpdateAssignmentHandler implements ICommandHandler<UpdateAssignment
     }
     if (dto.note !== undefined) set.note = dto.note.trim();
     if (dto.status !== undefined) set.status = dto.status;
+    if (dto.reveal !== undefined) set.reveal = dto.reveal;
 
+    const mode = dto.mode ?? assignment.mode ?? AssignmentMode.CLASSIC;
+    const modeChanged = mode !== (assignment.mode ?? AssignmentMode.CLASSIC);
+    const timeChanged =
+      mode === AssignmentMode.EXAM &&
+      dto.timeLimitSec !== undefined &&
+      dto.timeLimitSec !== assignment.timeLimitSec;
+    if (modeChanged || timeChanged) {
+      await this.assertNotStarted(assignment._id);
+      set.mode = mode;
+      set.timeLimitSec = examTime(
+        mode,
+        dto.timeLimitSec ?? assignment.timeLimitSec,
+        await this.quizSuggestion(assignment.quizId),
+      );
+    }
+
+    const unset =
+      set.mode === AssignmentMode.CLASSIC ? { timeLimitSec: 1 } : {};
+    if (set.mode === AssignmentMode.CLASSIC) delete set.timeLimitSec;
     const updated = await this.assignmentModel
       .findByIdAndUpdate(
         assignment._id,
-        { $set: set },
+        { $set: set, $unset: unset },
         { returnDocument: 'after' },
       )
       .lean();
     const [view] = await this.submissions.views([updated!]);
     return view;
+  }
+
+  /** Mode and exam time are fixed once someone has started (plan E6). */
+  private async assertNotStarted(assignmentId: Types.ObjectId): Promise<void> {
+    const attempts = await this.submissions.attempts([assignmentId]);
+    const started =
+      (attempts.get(assignmentId.toString())?.size ?? 0) > 0 ||
+      (await this.queryBus.execute(
+        new ExamStartedQuery(assignmentId.toString()),
+      ));
+    if (started) {
+      throw new ConflictException(
+        'Đã có học sinh làm bài nên không đổi được chế độ hay thời gian',
+      );
+    }
+  }
+
+  private async quizSuggestion(quizId: Types.ObjectId) {
+    const quiz = await this.quizModel.findById(quizId, { settings: 1 }).lean();
+    return quiz?.settings?.timeLimitSec ?? null;
   }
 }
 

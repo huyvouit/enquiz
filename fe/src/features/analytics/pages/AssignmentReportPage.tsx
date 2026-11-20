@@ -33,6 +33,7 @@ export function AssignmentReportPage() {
                 <>
                   {a.className} · {a.target.kind === 'group' ? `Nhóm ${a.target.groupName ?? ''}` : TARGET_LABEL[a.target.kind]}{' '}
                   · Hạn nộp {formatDateTime(a.dueDate)}
+                  {a.mode === 'exam' && a.timeLimitSec ? ` · 📝 Kiểm tra ${Math.round(a.timeLimitSec / 60)} phút` : ''}
                   {a.status === 'closed' ? ' · 🔒 Đã đóng' : ''}
                 </>
               }
@@ -68,6 +69,9 @@ export function AssignmentReportPage() {
     </div>
   )
 }
+
+const formatTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 
 function Summary({ a }: { a: AssignmentDetail }) {
   const c = a.counts
@@ -107,7 +111,17 @@ function Submissions({ a }: { a: AssignmentDetail }) {
                 <span className="block text-xs text-ink-soft">@{s.student.username}</span>
               </td>
               <td className="px-4 py-3">
-                <StateChip state={s.state} />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <StateChip state={s.state} />
+                  {s.inProgress ? (
+                    <span className="rounded-full bg-sky-soft px-2 py-0.5 text-xs font-bold text-sky-900">
+                      ✍️ Đang làm · hết giờ lúc {formatTime(s.inProgress.deadlineAt)}
+                    </span>
+                  ) : null}
+                  {s.isAutoSubmit ? (
+                    <span className="rounded-full bg-sunny-soft px-2 py-0.5 text-xs font-bold text-amber-900">⏱ Tự nộp</span>
+                  ) : null}
+                </div>
               </td>
               <td className="px-4 py-3 font-display text-lg font-extrabold text-brand">{fmt(s.score)}</td>
               <td className="px-4 py-3 text-sm">{s.submittedAt ? formatDateTime(s.submittedAt) : '–'}</td>

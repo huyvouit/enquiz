@@ -55,6 +55,7 @@ export class GetQuizResultsHandler implements IQueryHandler<GetQuizResultsQuery>
         totalQuestions: a.totalQuestions,
         passed: a.passed ?? false,
         xpEarned: a.xpEarned ?? 0,
+        mode: a.mode ?? 'classic',
         completedAt: a.completedAt,
         student: {
           id: a.studentId.toString(),

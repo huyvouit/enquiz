@@ -15,6 +15,10 @@ export enum QuizStatus {
 export class QuizSettings {
   @Prop({ type: Boolean, default: false })
   shuffleQuestions: boolean;
+
+  /** Suggested time for an exam of this quiz, in seconds (plan E6). */
+  @Prop({ type: Number, default: null })
+  timeLimitSec?: number | null;
 }
 const QuizSettingsSchema = SchemaFactory.createForClass(QuizSettings);
 

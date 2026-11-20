@@ -25,6 +25,8 @@ export interface AttemptLite {
   id?: string;
   score: number;
   completedAt: Date;
+  /** Exam handed in by the system when time ran out (plan E5). */
+  isAutoSubmit?: boolean;
 }
 
 export interface Submission {
@@ -36,6 +38,8 @@ export interface Submission {
   attempts: number;
   /** The attempt whose score counts (best one), for "Xem bài làm". */
   attemptId: string | null;
+  /** The counted attempt is an exam handed in by the system. */
+  isAutoSubmit: boolean;
 }
 
 /**
@@ -58,6 +62,7 @@ export function submissionOf(
       submittedAt: null,
       attempts: 0,
       attemptId: null,
+      isAutoSubmit: false,
     };
   }
   const firstAt = Math.min(...counted.map((a) => a.completedAt.getTime()));
@@ -68,7 +73,23 @@ export function submissionOf(
     submittedAt: new Date(firstAt),
     attempts: attempts.length,
     attemptId: best.id ?? null,
+    isAutoSubmit: best.isAutoSubmit ?? false,
   };
+}
+
+/**
+ * Until when an exam hides correct answers and explanations from students
+ * (plan E12); null = shown. Classic homework always shows them.
+ */
+export function answersHiddenUntil(
+  a: { mode?: string; reveal?: string; dueDate: Date },
+  now = new Date(),
+): Date | null {
+  const hidden =
+    a.mode === 'exam' &&
+    a.reveal === 'after_due' &&
+    now.getTime() < a.dueDate.getTime();
+  return hidden ? a.dueDate : null;
 }
 
 export interface SubmissionCounts {

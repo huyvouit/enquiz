@@ -49,6 +49,16 @@ Số hoá việc giao bài về nhà của giáo viên tiểu học: giao một 
   - Trạng thái **tính lúc đọc**, không lưu: đổi hạn nộp thì mọi thứ tự đúng lại.
   - Quá hạn vẫn làm được (ghi nhận muộn); bài **đã đóng** thì mở phiên trả 409.
 
+### Chế độ Kiểm tra (4.2, tài liệu 14)
+- `assignments` có thêm `mode` (`classic` | `exam`, thiếu = `classic`), `timeLimitSec` (chỉ exam, 60–5400 giây) và `reveal` (`after_submit` | `after_due`).
+- Giao bài: `mode`, `timeLimitSec`, `reveal` là tuỳ chọn. Exam thiếu `timeLimitSec` thì lấy `quiz.settings.timeLimitSec`, không có thì 15 phút.
+- `PATCH /assignments/:id`: `reveal` đổi lúc nào cũng được; `mode` và `timeLimitSec` chỉ đổi được khi chưa em nào làm (409).
+- Bài kiểm tra **không** mở được bằng `POST /progress/sessions` (409), và không nằm trong `AssignedQuizIdsQuery` (học sinh không xem trước đề của quiz giáo viên).
+- Danh sách và bảng nộp bài trả thêm `mode`, `timeLimitSec`, `reveal`. Mỗi em có thêm `isAutoSubmit` và `inProgress: { deadlineAt }`. `/assignments/mine` có thêm `exam: { state, sessionId, deadlineAt }`.
+- Trước khi đọc trạng thái nộp bài, `AssignmentSubmissionsService.attempts()` gọi `FinalizeExpiredExamsCommand` (có `await`) để chốt các phiên thi quá giờ (E5). Analytics cũng làm vậy trước khi tính bản đồ nhiệt.
+- Học sinh: thẻ bài có nhãn "📝 Kiểm tra · N phút"; nút "Làm bài kiểm tra" / "Làm tiếp ⏱" / "Xem kết quả" dẫn tới `/exam/:assignmentId`.
+- Giáo viên: hộp giao bài có Chế độ, Thời gian, Cho xem đáp án. Bảng nộp bài có nhãn "✍️ Đang làm" và "⏱ Tự nộp".
+
 ## Frontend
 - Feature: `fe/src/features/assignments/` (TanStack Query, key `['assignments', ...]`).
 - Route: `/assignments` (`MyAssignmentsPage`, học sinh).

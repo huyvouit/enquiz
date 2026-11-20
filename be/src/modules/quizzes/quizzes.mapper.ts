@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { shuffle } from '../../common/utils/shuffle.js';
+import { type Random, shuffle } from '../../common/utils/shuffle.js';
 import { QuestionType } from '../questions/question-types.js';
 import type { QuestionView } from '../questions/questions.mapper.js';
 import type { Question } from '../questions/schemas/question.schema.js';
@@ -29,7 +29,7 @@ export interface QuizSummary {
 
 /** Teacher view: summary + full questions with answer keys. */
 export interface QuizDetail extends QuizSummary {
-  settings: { shuffleQuestions: boolean };
+  settings: { shuffleQuestions: boolean; timeLimitSec: number | null };
   questions: QuestionView[];
 }
 
@@ -95,7 +95,14 @@ export type PlayableQuestionDoc = Pick<
   | 'correctAnswer'
 >;
 
-export function toPlayQuestion(q: PlayableQuestionDoc): PlayQuestion {
+/**
+ * `random` decides option order. Exams pass a seeded generator so the order
+ * is the same each time the session is loaded (plan E10).
+ */
+export function toPlayQuestion(
+  q: PlayableQuestionDoc,
+  random: Random = Math.random,
+): PlayQuestion {
   const base: PlayQuestion = {
     id: q._id.toString(),
     type: q.type,
@@ -107,17 +114,17 @@ export function toPlayQuestion(q: PlayableQuestionDoc): PlayQuestion {
   };
   switch (q.type) {
     case QuestionType.MULTIPLE_CHOICE:
-      return { ...base, options: shuffle(q.options ?? []) };
+      return { ...base, options: shuffle(q.options ?? [], random) };
     case QuestionType.FILL_IN_BLANK:
       return q.options?.length
-        ? { ...base, options: shuffle(q.options) }
+        ? { ...base, options: shuffle(q.options, random) }
         : base;
     case QuestionType.ORDERING: {
       // correctAnswer is read here only to scramble it; it is never sent.
       const items = Array.isArray(q.correctAnswer)
         ? (q.correctAnswer as string[])
         : [];
-      return { ...base, ordering: { items: scramble(items) } };
+      return { ...base, ordering: { items: scramble(items, random) } };
     }
     case QuestionType.MATCHING: {
       const pairs = q.pairs ?? [];
@@ -125,7 +132,10 @@ export function toPlayQuestion(q: PlayableQuestionDoc): PlayQuestion {
         ...base,
         matching: {
           lefts: pairs.map((p) => p.left),
-          rights: shuffle(pairs.map((p) => p.right)),
+          rights: shuffle(
+            pairs.map((p) => p.right),
+            random,
+          ),
         },
       };
     }
@@ -135,10 +145,13 @@ export function toPlayQuestion(q: PlayableQuestionDoc): PlayQuestion {
 }
 
 /** Shuffles until the order differs from the original (when the items allow it). */
-export function scramble(items: string[]): string[] {
+export function scramble(
+  items: string[],
+  random: Random = Math.random,
+): string[] {
   if (new Set(items).size < 2) return [...items];
   for (let i = 0; i < 10; i++) {
-    const s = shuffle(items);
+    const s = shuffle(items, random);
     if (s.some((v, j) => v !== items[j])) return s;
   }
   return [...items.slice(1), items[0]];

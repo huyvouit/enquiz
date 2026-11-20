@@ -1,6 +1,6 @@
 # Kế hoạch Giai đoạn 4 – Lên production, dọn nợ, Exam Mode & UX
 
-> Trạng thái: **Đang triển khai** · 4.0, 4.1: code xong, chờ dựng hạ tầng · 4.2–4.3: chưa bắt đầu · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
+> Trạng thái: **Đang triển khai** · 4.0, 4.1: code xong, chờ dựng hạ tầng · 4.2: code xong ([tài liệu 14](features/14-exam-mode.md)), chưa chạy trên môi trường deploy · 4.3: chưa bắt đầu · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
 
 Bản nháp lộ trình ban đầu đặt Giai đoạn 4 là "Cải thiện UX/DX, Exam Mode & Dọn nợ nền tảng", còn việc deploy để tận Giai đoạn 6. Khi rà soát, có ba lý do khiến deploy phải lên trước:
 - Đáp án câu nghe đang bị lộ qua `audioText`.
@@ -25,6 +25,8 @@ Vì vậy Giai đoạn 4 được sắp lại thành **4.0 Deploy → 4.1 Bảo 
 | `@nestjs/storage@0.0.5` (bản 0.0.x) | Rủi ro bảo trì; chưa từng chạy với bucket thật | 4.1 |
 | 14 file còn dùng `useAsync` (9 file đã dùng TanStack Query) | Hai cách lấy dữ liệu song song, không cache | 4.1 |
 | Chỉ có chế độ chơi "classic" (phản hồi từng câu, câu đầu là cuối) | Giáo viên không ra được bài kiểm tra có giờ, đi lại giữa các câu | 4.2 |
+| Đáp án trắc nghiệm được xáo lại mỗi lần tải đề | Với Exam, F5 sẽ làm đáp án đổi chỗ | 4.2 (E10) |
+| `ProgressionService` tính `passed`/điểm cao nhất trên mọi lượt làm | Bài kiểm tra đạt điểm sẽ mở trạm, cộng cấp | 4.2 (E4) |
 | Sắp xếp câu & Nối từ khó thao tác trên tablet; thiếu thao tác giáo viên (nhân bản câu, CSV mẫu…) | Trải nghiệm lớp 1–2 và giáo viên chưa mượt | 4.3 |
 
 **Đã có sẵn để tận dụng:**
@@ -37,7 +39,7 @@ Vì vậy Giai đoạn 4 được sắp lại thành **4.0 Deploy → 4.1 Bảo 
 
 ## 2. Quyết định
 
-Quyết định chung đánh số tiếp từ Giai đoạn 3 (D12…). Quyết định cho Exam Mode dùng E1–E8.
+Quyết định chung đánh số tiếp từ Giai đoạn 3 (D12…). Quyết định cho Exam Mode dùng E1–E13.
 
 ### D12. Nền tảng deploy – **đã chốt**
 - **Phương án B:** frontend trên **Firebase Hosting**, backend trên **Google Cloud Run** (container từ `be/Dockerfile`), DB trên **MongoDB Atlas**, ảnh trên **Cloud Storage**. Region `asia-southeast1` (Singapore).
@@ -87,37 +89,50 @@ Quyết định chung đánh số tiếp từ Giai đoạn 3 (D12…). Quyết �
   - Chạy được: giữ, ghim phiên bản, theo dõi changelog.
   - Không chạy được: thay bằng `@google-cloud/storage` đặt sau `StorageService` của dự án, để đổi nhà cung cấp chỉ sửa một chỗ.
 
-### Exam Mode (E1–E8) – **đã chốt**
+### Exam Mode (E1–E13) – **đã chốt** (rà soát lại ngày 2026-11-20)
 
-Áp dụng cho bài tập do giáo viên chọn chế độ `exam`. Challenge ngẫu nhiên thuộc giai đoạn sau. **Bản đồ trạm giữ nguyên logic hiện tại.**
+Áp dụng cho bài tập do giáo viên chọn chế độ `exam`. Challenge ngẫu nhiên thuộc giai đoạn sau. **Bản đồ trạm giữ nguyên logic hiện tại.** Thiết kế chi tiết: [tài liệu 14](features/14-exam-mode.md).
 
 - **E1. Đồng hồ:**
-  - Server lưu `startedAt` và `deadlineAt = startedAt + timeLimitSec` trong phiên. Client chỉ hiển thị đếm ngược theo `deadlineAt`.
-  - Hết giờ, client khoá form và tự nộp (`isAutoSubmit: true`).
-  - Server so thời điểm nộp với `deadlineAt`, cộng vài giây ân hạn cho độ trễ mạng.
-  - Không dùng `expiresAt` hiện có làm hạn nộp, vì TTL index xoá document đúng lúc đó. TTL đặt bằng `deadlineAt` cộng khoảng đệm.
-- **E2. Lưu đáp án & F5:**
-  - Nháp lưu liên tục ở `sessionStorage` theo `sessionId`: đáp án, câu đang đứng, câu đánh dấu.
-  - Khi F5, client gọi API khôi phục phiên đang làm. Server trả câu hỏi và `deadlineAt`; client ghép nháp vào.
-  - Nộp thành công thì xoá nháp.
-- **E3. Sửa đáp án:**
-  - `answers[questionId]` được ghi đè cho tới khi nộp hoặc hết giờ. Server chấm **một lần**.
-  - Luật "câu trả lời đầu là cuối cùng" chỉ áp dụng cho `mode: 'classic'`.
-- **E4. Tính điểm:** Exam **không mở trạm** và **không cộng XP**, nên không ảnh hưởng bảng xếp hạng (xếp theo XP).
-- **E5. Đóng tab và không quay lại trước khi hết giờ:**
-  - Server tự nộp bài rỗng, 0 điểm (`isAutoSubmit: true`), lượt đã dùng. Theo D7 bài này tính là **đã nộp**.
-  - Không lưu nháp lên server. Nếu sau này cần thì thêm `PATCH /progress/sessions/:id/draft` chạy debounce 15–20 giây.
+  - Server lưu `startedAt` và `deadlineAt = startedAt + timeLimitSec` trong phiên, rồi trả `serverNow` để client hiệu chỉnh độ lệch giờ máy. Client chỉ hiển thị đếm ngược.
+  - Hết giờ, client khoá thao tác và tự nộp (`isAutoSubmit: true`).
+  - Ân hạn độ trễ mạng `EXAM_GRACE_MS` = **10 giây**.
+- **E2. Lưu bài làm:** *(đổi: trước chỉ lưu `sessionStorage`)*
+  - Mỗi thao tác lưu ngay vào `localStorage` theo `sessionId`.
+  - Lưu **nháp lên server** (`PATCH /exams/:id/answers`) khi chuyển câu, khi đánh dấu, và debounce 10 giây.
+  - F5, đóng tab hay đổi máy: `POST /exams/start` trả lại phiên đang làm, kèm nháp server. Client ghép thêm nháp local nếu mới hơn.
+- **E3. Sửa đáp án:** được sửa tới khi nộp hoặc hết giờ; server chấm **một lần**. Luật "câu đầu là cuối cùng" chỉ áp dụng cho `classic`.
+- **E4. Tính điểm:**
+  - Exam **không mở trạm**, **không cộng XP**, không ảnh hưởng cấp độ hay bảng xếp hạng.
+  - Mọi truy vấn của `ProgressionService` lọc bỏ `mode: 'exam'`.
+- **E5. Hết giờ mà chưa nộp:** *(đổi: trước chấm 0 điểm)*
+  - Server **chấm nháp đã lưu**, đặt `status: timed_out`, `isAutoSubmit: true`. Bài này tính là đã nộp (D7).
+  - Nộp sau ân hạn: bỏ qua bài gửi lên, chấm nháp.
+  - **Chốt lười:** `FinalizeExpiredExamsCommand` chạy (có `await`) trước mỗi lần đọc trạng thái bài tập, bảng nộp bài, thống kê, hoặc khi bắt đầu thi. Không dùng job chạy nền.
 - **E6. Thời lượng & chế độ:**
-  - `Quiz.timeLimitSec` là mặc định (`null` = không giới hạn). Lúc giao bài có thể ghi đè bằng `Assignment.timeLimitSec`.
-  - `Assignment.mode: 'classic' | 'exam'`. Bài cũ thiếu trường này được hiểu là `classic`.
+  - `Assignment.mode: 'classic' | 'exam'`; thiếu trường này thì hiểu là `classic`.
+  - `Assignment.timeLimitSec` **bắt buộc với exam**, từ 1 đến 90 phút. Mặc định lấy `Quiz.timeLimitSec` (gợi ý), không có thì 15 phút.
+  - Chỉ đổi `mode` và giờ khi chưa em nào bắt đầu.
 - **E7. Ghi kết quả:**
-  - Ghi vào **cùng `student_progress`**, dùng lại các trường sẵn có (`score`, `completedAt`, `details[]`…).
-  - Thêm `mode` và `isAutoSubmit`; `xpEarned = 0`.
-  - **Không lưu `isLate`:** D7 tính đúng hạn hay muộn lúc đọc.
+  - Ghi **một** `student_progress` (`mode: 'exam'`, `isAutoSubmit`, `xpEarned = 0`) để D7, bảng điểm, bản đồ nhiệt và báo cáo dùng được ngay.
+  - Không lưu `isLate`. Đúng hạn hay muộn tính theo lúc nộp so với `dueDate`.
 - **E8. Số lượt:**
-  - **1 lượt** cho mỗi học sinh, mỗi bài Exam. Lượt bị tính **ngay khi bắt đầu**.
-  - Hết giờ thì tự nộp với đáp án hiện có.
-  - Không áp dụng quy tắc "lấy điểm cao nhất" của D7.
+  - **1 lượt** cho mỗi học sinh, mỗi bài. Lượt bị tính **ngay khi bắt đầu**.
+  - Unique `{assignmentId, studentId}` trên `exam_sessions`. Việc nộp đổi trạng thái nguyên tử, nên không cần index riêng trên `student_progress`.
+  - "Giáo viên cho làm lại" để sau.
+- **E9. Collection riêng `exam_sessions`** (module `exams`), không TTL:
+  - Lưu ảnh chụp `questionIds`, `timeLimitSec`, bài làm, đánh dấu, trạng thái `in_progress | submitted | timed_out`, `progressId`.
+  - `kind: 'assignment'`, chừa chỗ cho `'challenge'`.
+- **E10. Đề cố định trong một phiên:**
+  - Thứ tự câu được chụp lúc bắt đầu (xáo một lần nếu quiz bật xáo).
+  - Thứ tự lựa chọn xáo theo hạt giống `sessionId + questionId`, nên F5 không đổi chỗ đáp án.
+- **E11. Chống tra đáp án:**
+  - Phiên Luyện tập bị từ chối khi `assignmentId` là bài kiểm tra.
+  - Phiên Luyện tập cũng bị từ chối khi em đang có phiên kiểm tra chưa nộp trên **cùng quiz**.
+- **E12. Cho xem đáp án:**
+  - `Assignment.reveal: 'after_submit'` (mặc định) | `'after_due'`.
+  - Điểm và đúng/sai luôn hiện ngay. Đáp án đúng và giải thích hiện theo `reveal`; quy tắc áp dụng cho cả trang xem lại lượt làm.
+- **E13. Màn giới thiệu trước khi tính giờ:** số câu, thời gian, "chỉ làm 1 lần". Cảnh báo nếu hạn nộp đến trước lúc hết giờ làm.
 
 ---
 
@@ -164,48 +179,59 @@ Code xong; xem [Kết quả 4.1](#kết-quả-41).
 
 ### 4.2 Exam Mode (tài liệu 14)
 
+Code xong; xem [Kết quả 4.2](#kết-quả-42). Thiết kế đầy đủ (luồng, endpoint, payload, quy tắc, giao diện): [14-exam-mode.md](features/14-exam-mode.md). Ở đây chỉ ghi thứ tự làm.
+
 **Dữ liệu**
 ```
-quizzes.timeLimitSec?: Number          // null = không giới hạn (E6)
-assignments.mode: 'classic' | 'exam'   // thiếu = classic
-assignments.timeLimitSec?: Number      // ghi đè của quiz
-quiz_sessions.mode, deadlineAt         // exam: không chấm từng câu
-student_progress.mode, isAutoSubmit    // E7
+exam_sessions (mới)        studentId, assignmentId, quizId, kind, questionIds, timeLimitSec,
+                           startedAt, deadlineAt, status, answers, flagged, draftSavedAt,
+                           submittedAt, isAutoSubmit, progressId
+                           unique {assignmentId, studentId} · {studentId, status} · {status, deadlineAt}
+assignments                mode ('classic' mặc định), timeLimitSec, reveal ('after_submit' mặc định)
+quizzes                    settings.timeLimitSec? (gợi ý)
+student_progress           mode ('classic' mặc định), isAutoSubmit
 ```
-- **Khoá 1 lượt (E8):** bắt đầu Exam bị từ chối khi đang có phiên mở (unique index sẵn có) **hoặc** đã có `student_progress` với `mode: 'exam'` cho bài đó. Thêm index unique một phần `{assignmentId, studentId}` với điều kiện `mode: 'exam'` để chặn nộp trùng khi hai request chạy song song.
-- **Chốt phiên quá giờ (E5):**
-  - **Đề xuất: chốt lười.** Mỗi lần đọc trạng thái bài tập (danh sách bài của em, bảng nộp bài, thống kê) hoặc bắt đầu phiên, server chốt các phiên Exam quá `deadlineAt + ân hạn` thành bài 0 điểm.
-  - Không dùng job định kỳ, vì Cloud Run `min-instances=0` không giữ tiến trình chạy nền. TTL đặt `deadlineAt` + 30 ngày.
 
-**Backend**
+**Backend** (module `exams`, ~4–5 ngày)
 
 | Method | Đường dẫn | Việc |
 | --- | --- | --- |
-| POST | `/progress/sessions` | Bài `mode: exam` → tạo phiên có `deadlineAt`, trả câu hỏi (không có đáp án) |
-| GET | `/progress/sessions/:id` | Khôi phục phiên đang làm sau F5: câu hỏi, `deadlineAt`, giờ server |
-| POST | `/progress/sessions/:id/submit` | `{ answers[], isAutoSubmit }` → chấm một lần, ghi `student_progress`, trả kết quả kèm đáp án đúng và giải thích |
+| POST | `/exams/start` | `{ assignmentId }` → bắt đầu hoặc vào tiếp; đã nộp → 409 |
+| PATCH | `/exams/:id/answers` | Lưu nháp (đáp án + đánh dấu); quá ân hạn → 409 |
+| POST | `/exams/:id/submit` | `{ answers, flagged?, isAutoSubmit }` → chấm một lần, trả kết quả theo `reveal` |
+| GET | `/exams/:id` | Đang làm → phiên; đã nộp → kết quả |
 
-- Nhánh `classic` (`/answers`, `/finish`) giữ nguyên. Phiên exam gọi `/answers` thì trả 409.
+1. Thêm các schema và trường mới. Mở rộng DTO giao bài và sửa bài (`mode`, `timeLimitSec`, `reveal`).
+2. Viết hàm thuần (unit test):
+   - `examDeadline`, `isWithinGrace`;
+   - `seededShuffle`;
+   - `gradeExamAnswers`, dùng lại `gradeAnswer`;
+   - `redactForReveal`.
+3. Handler bắt đầu, lưu nháp, nộp; `FinalizeExpiredExamsCommand`.
+4. Ghi `student_progress` cho exam, không đi qua phần XP và mở trạm. Thêm điều kiện `mode ≠ exam` vào `ProgressionService`.
+5. Chặn Luyện tập (E11). Ẩn đáp án ở `GET /progress/attempts/:id` theo `reveal`.
+6. Assignments và analytics gọi chốt lười trước khi đọc. `/assignments/mine` trả thêm thông tin exam. Bảng nộp bài trả thêm `isAutoSubmit` và `inProgress`.
 
-**Frontend**
-- Trang làm bài Exam:
-  - Đồng hồ tính theo `deadlineAt − giờ server`, có hiệu chỉnh độ lệch giờ máy.
-  - Lưới số câu để nhảy tới câu bất kỳ; nút Trước/Sau; đánh dấu câu.
-  - Màn rà soát trước khi nộp.
-  - Cảnh báo `beforeunload` khi rời trang.
-  - Nháp lưu ở `sessionStorage`.
-- Sau khi nộp: điểm, đúng/sai từng câu và giải thích.
-- Form giao bài có chọn chế độ (Luyện tập / Kiểm tra) và thời lượng.
-- Bảng nộp bài và thống kê ghi chú bài nào được tự nộp.
+**Frontend** (feature `exam`, ~4–5 ngày)
+1. `FillBlankGame` và `OrderingGame` thêm chế độ điều khiển từ ngoài (không có nút "Kiểm tra").
+2. Route `/exam/:assignmentId` ngoài `AppLayout`. Ba màn: Giới thiệu → Phòng thi → Kết quả.
+3. Phòng thi:
+   - Thanh trên: tiến độ, 🚩 đánh dấu, ☰ lưới câu, đồng hồ cam ở 2 phút và đỏ ở 1 phút.
+   - Thanh dưới: Câu trước / Câu tiếp / Xem lại bài.
+   - Hộp rà soát trước khi nộp.
+4. `useExamClock`, `useExamDraft` (local + server), `useLeaveGuard` (`beforeunload` và `useBlocker`).
+5. Phía giáo viên: AssignDialog (chế độ, giờ, cho xem đáp án), SubmissionTable (⏱ Tự nộp, Đang làm), Quiz builder (thời gian gợi ý).
+6. Phía học sinh: nhãn 📝 ở trang Bài tập và băng nhắc; nhãn "Kiểm tra" trong lịch sử.
 
-**Kiểm thử**
-- Unit: tính `deadlineAt`, ân hạn, chấm cả mảng đáp án.
-- e2e:
-  - Nộp đúng giờ, nộp trong ân hạn, nộp quá giờ.
-  - Bắt đầu lần hai → 409.
-  - Phiên quá giờ chưa nộp được chốt thành 0 điểm khi đọc.
-  - XP không đổi, trạm không mở.
-  - Trạng thái D7 và bản đồ nhiệt đúng với bài exam.
+**Kiểm thử:** danh sách đầy đủ ở tài liệu 14, mục *Kiểm thử*. Tối thiểu gồm:
+- nộp đúng giờ, trong ân hạn, quá ân hạn;
+- bắt đầu lần hai và bấm "Bắt đầu" hai lần cùng lúc;
+- chốt lười;
+- XP và trạm không đổi;
+- chặn Luyện tập;
+- `reveal`;
+- trạng thái D7 và bản đồ nhiệt;
+- chạy thử trên trình duyệt kích thước tablet: F5 giữa giờ, hết giờ tự nộp.
 
 ### 4.3 UX & thao tác giáo viên
 
@@ -229,8 +255,8 @@ student_progress.mode, isAutoSubmit    // E7
 
 ## 4. Migrate dữ liệu (`npm run migrate:phase4`, nếu cần)
 
-- `assignments`, `student_progress`: **không cần migrate**. Thiếu `mode` được hiểu là `classic`.
-- `student_progress`: tạo index unique một phần `{assignmentId, studentId}` với `mode: 'exam'`.
+- `assignments`, `student_progress`: **không cần migrate**. Thiếu `mode` được hiểu là `classic`; thiếu `reveal` được hiểu là `after_submit`.
+- `exam_sessions`: collection mới. **Không cần script**: Mongoose tạo index (unique `{assignmentId, studentId}` và hai index đọc) khi API khởi động, vì dự án không tắt `autoIndex`. Nếu sau này tắt `autoIndex` ở production thì phải viết `migrate:phase4` để tạo index này trước khi mở Exam.
 - `questions`: sinh `audioUrl` cho câu có `audioText` (4.1). Script idempotent, có `--dry-run`.
 
 ---
@@ -253,7 +279,9 @@ student_progress.mode, isAutoSubmit    // E7
 | Dữ liệu trẻ em trên production | Cao | Không mở cho trường thật trước khi có cơ chế đồng ý của phụ huynh |
 | Khởi động lạnh (`min-instances=0`) làm lần mở đầu chậm vài giây | Thấp | Chấp nhận ở Giai đoạn 4; Giai đoạn 5 đặt `min-instances=1` |
 | Exam: lệch giờ máy học sinh | Trung bình | Đồng hồ dựa trên giờ server; server là nơi quyết định |
-| Exam: em lỡ đóng tab trên tablet bị 0 điểm (E5) | Trung bình | Cảnh báo `beforeunload`; theo dõi số bài tự nộp rỗng, nhiều thì bật lưu nháp lên server |
+| Exam: em lỡ đóng tab, tablet hết pin | Thấp | Nháp lưu lên server (E2); hết giờ thì chấm nháp (E5); mở lại thì làm tiếp được |
+| Exam: lưu nháp làm tăng số lần ghi DB | Thấp | Debounce 10 giây và lưu khi chuyển câu; 30 em ≈ 3 lần ghi/giây |
+| Exam: em mở Luyện tập cùng quiz để xem đáp án | Trung bình | Chặn khi đang có phiên kiểm tra (E11); quiz hệ thống thì nhắc giáo viên lúc giao bài |
 | Chi phí TTS và Cloud Storage | Thấp | Sinh một lần mỗi câu, cache; ước tính trước khi chạy script sinh bù |
 
 ---
@@ -340,3 +368,40 @@ student_progress.mode, isAutoSubmit    // E7
 **Còn lại**
 - D18: kết quả thử `@nestjs/storage` với Cloud Storage thật (4.0).
 - Chạy thử trên trình duyệt các màn đã chuyển sang TanStack Query.
+
+### Kết quả 4.2
+
+> Ngày: 2026-11-20 · Nhánh `feat/4.2-exam-mode` (chưa commit) · Trạng thái: **code xong**, chưa chạy trên môi trường deploy
+
+**Đã làm**
+
+| Việc | Chi tiết | File chính |
+| --- | --- | --- |
+| Module `exams` (E1–E3, E5, E8–E10) | Phiên thi riêng `exam_sessions`, không TTL. Endpoint: giới thiệu, bắt đầu/vào tiếp, lưu nháp, nộp, xem. Chấm một lần bằng `gradeAnswer` có sẵn, ghi một `student_progress`. Hết giờ thì chấm nháp; nộp quá ân hạn bị bỏ qua. Thứ tự đáp án xáo theo hạt giống `sessionId:questionId` | `be/src/modules/exams/*`, `common/utils/exam-time.ts`, `common/utils/shuffle.ts` (`seededRandom`) |
+| Chốt bài quá giờ không cần job (E5, D13) | `FinalizeExpiredExamsCommand` được `await` trong `AssignmentSubmissionsService.attempts()` và trước bản đồ nhiệt. Phiên bị chốt tính nộp lúc `deadlineAt` | `assignment-submissions.service.ts`, `analytics.service.ts` |
+| Bài tập (E6, E12) | `mode`, `timeLimitSec`, `reveal`; mặc định thời gian lấy từ `quiz.settings.timeLimitSec` rồi 15 phút; khoá đổi chế độ/thời gian khi đã có em làm. Danh sách trả `exam` (học sinh), `inProgress`/`isAutoSubmit` (giáo viên) | `assignments/*` |
+| Tiến trình bỏ qua bài kiểm tra (E4) | `PRACTICE_ONLY` trong mọi truy vấn của `ProgressionService`; lượt kiểm tra `xpEarned = 0` | `progression.service.ts`, `student-progress.schema.ts` |
+| Chống tra đáp án (E11) | Luyện tập cùng quiz bị chặn khi đang thi; bài kiểm tra không mở được qua `/progress/sessions`; quiz chỉ giao dạng kiểm tra không xem trước được qua `/quizzes/:id/play` | `start-quiz-session.handler.ts`, `assignment-access.handlers.ts` |
+| Ẩn đáp án (E12) | `answersHiddenUntil` + `hideAnswers` cho kết quả nộp, `GET /exams/:id`, `GET /progress/attempts/:id` (chỉ với học sinh) | `progress.mapper.ts`, `get-attempt.handler.ts`, `exam.service.ts` |
+| Phòng thi (frontend) | `/exam/:assignmentId` ngoài `AppLayout`: giới thiệu (E13) → phòng thi → kết quả. Đồng hồ theo giờ server, cam ở 2 phút, đỏ ở 1 phút; tiến độ; 🚩 đánh dấu; lưới câu; Câu trước/Câu tiếp; hộp rà soát; tự nộp khi hết giờ. Nháp ở `localStorage` + server. Cảnh báo `beforeunload` và `useBlocker`. Trên điện thoại "Nộp bài" lên thanh trên | `fe/src/features/exam/*`, `app/router.tsx` |
+| Game điều khiển từ ngoài | `FillBlankGame`, `OrderingGame` có `value`/`onChange` (không nút Kiểm tra); `MultipleChoiceGame.selectedIcon` | `features/play/components/*` |
+| Giáo viên & danh sách | Hộp giao bài: Chế độ, Thời gian, Cho xem đáp án, nhắc quiz hệ thống. Nhãn "📝 Kiểm tra · N phút", "✍️ Đang làm", "⏱ Tự nộp". Hộp gia hạn đổi được `reveal`. Trình tạo quiz có "Thời gian gợi ý". Lịch sử có nhãn "📝 Kiểm tra". Kết quả hiện "Đáp án sẽ hiện sau hạn nộp" | `features/assignments/*`, `features/analytics/pages/AssignmentReportPage.tsx`, `QuizBuilderPage.tsx`, `features/progress/components/{ResultView,AnswerReview}.tsx` |
+| Tài liệu | Tài liệu 14 (đổi sang Xong, ghi theo code thật), 04, 05, 11, README be/fe, roadmap | — |
+
+**Kết quả kiểm tra**
+- Backend: lint, prettier sạch; **74 unit** test pass (14 mới); **65 e2e** test pass (18 mới trong `test/exam.e2e-spec.ts`); build thành công.
+- Frontend: `tsc`, lint, build sạch. `ExamPage` tải riêng (~17 kB), bundle chính giữ ~325 kB.
+- Chạy thử trên trình duyệt (dữ liệu tạm trong bộ nhớ, tablet và điện thoại): xem tài liệu 14, mục *Kiểm thử*. Không có lỗi console.
+- **Chưa kiểm tra:** chạy trên Cloud Run/Firebase thật; Safari trên iPad (`beforeunload` không chắc chạy — đã có nháp server bù lại).
+
+**Phát hiện và đã sửa trong lúc làm**
+- `ProgressionService` tính `passed` và điểm cao nhất trên mọi lượt làm: nếu không lọc, bài kiểm tra đạt điểm sẽ mở trạm và lên cấp.
+- `AssignedQuizIdsQuery` cho phép mở `GET /quizzes/:id/play` của mọi quiz được giao: học sinh xem trước được đề kiểm tra mà không tính giờ. Nay bỏ qua bài kiểm tra.
+- Phiên bị server chốt muộn (không ai mở trang) sẽ bị tính nộp muộn nếu dùng giờ chốt: nay tính tại `deadlineAt`.
+- Trang kết quả bài tập (analytics) có bảng nộp bài riêng, không dùng `SubmissionTable`: phải thêm nhãn Đang làm / Tự nộp ở cả hai nơi.
+- Trên điện thoại, `hidden` bị `inline-flex` của `Button` ghi đè nên nút Nộp bài hiện ở cả hai thanh; đã bọc bằng thẻ `div`.
+
+**Còn lại**
+- Giáo viên "cho làm lại" một em, gia hạn giờ trong lúc thi (để sau, tài liệu 14).
+- Chưa có giao diện đổi `mode`/`timeLimitSec` sau khi giao (API đã hỗ trợ khi chưa ai làm).
+- Theo dõi số bài "tự nộp" sau khi deploy để xem có cần nhắc học sinh nhiều hơn không (rủi ro E5).

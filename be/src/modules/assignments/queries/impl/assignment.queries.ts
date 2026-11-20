@@ -49,8 +49,9 @@ export class AssignedQuizIdsQuery extends Query<string[]> {
 }
 
 /**
- * Checks the student may play `quizId` as homework `assignmentId`.
- * Throws 404 (not assigned to them / wrong quiz) or 409 (closed).
+ * Checks the student may play `quizId` as practice homework `assignmentId`.
+ * Throws 404 (not assigned to them / wrong quiz) or 409 (closed, or an exam:
+ * exams are taken through the exams module only).
  */
 export class AssignmentPlayAccessQuery extends Query<true> {
   constructor(
@@ -58,6 +59,16 @@ export class AssignmentPlayAccessQuery extends Query<true> {
     public readonly quizId: string,
     public readonly studentId: string,
   ) {
+    super();
+  }
+}
+
+/**
+ * Until when the student may not see the answers of an attempt made for
+ * this homework (plan E12). null = visible (also for unknown homework).
+ */
+export class AnswersHiddenUntilQuery extends Query<Date | null> {
+  constructor(public readonly assignmentId: string) {
     super();
   }
 }

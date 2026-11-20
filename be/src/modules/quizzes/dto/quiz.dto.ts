@@ -16,6 +16,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import { EXAM_MAX_SEC, EXAM_MIN_SEC } from '../../../common/utils/exam-time.js';
 import { QuizStatus } from '../schemas/quiz.schema.js';
 
 export const QUIZ_MAX_QUESTIONS = 50;
@@ -24,6 +25,13 @@ export class QuizSettingsDto {
   @IsOptional()
   @IsBoolean()
   shuffleQuestions?: boolean;
+
+  /** Suggested exam time (plan E6); null clears it. */
+  @IsOptional()
+  @IsInt()
+  @Min(EXAM_MIN_SEC)
+  @Max(EXAM_MAX_SEC)
+  timeLimitSec?: number | null;
 }
 
 /** Used for both create (POST) and full update (PUT). */

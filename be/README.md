@@ -57,9 +57,11 @@ src/
     ├── progress/             # 04 (phiên chơi), 05, 07, 08
     ├── classes/              # 10 – lớp, nhóm, mã mời, tạo học sinh hàng loạt
     ├── assignments/          # 11 – bài tập, trạng thái nộp, nhắc nhở
+    ├── exams/                # 14 – chế độ kiểm tra: phiên thi, lưu nháp, chấm khi nộp
     ├── analytics/            # 12 – thống kê, bản đồ nhiệt, xuất Excel/PDF
     └── uploads/              # ảnh câu hỏi (@nestjs/storage)
 scripts/                      # migrate-phase2/3.mjs, lib.mjs (dùng chung)
 test/app.e2e-spec.ts          # E2E giai đoạn 1–2
 test/phase3.e2e-spec.ts       # E2E giai đoạn 3
+test/exam.e2e-spec.ts         # E2E chế độ kiểm tra (4.2)
 ```

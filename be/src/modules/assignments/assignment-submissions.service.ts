@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { FinalizeExpiredExamsCommand } from '../exams/commands/impl/exam.commands.js';
 import { StudentProgress } from '../progress/schemas/student-progress.schema.js';
 import { Quiz } from '../quizzes/schemas/quiz.schema.js';
 import {
@@ -13,6 +15,7 @@ import {
 import {
   AssignmentDoc,
   AssignmentView,
+  examSettingsOf,
   QuizDoc,
   toQuizRef,
 } from './assignments.mapper.js';
@@ -30,6 +33,7 @@ export class AssignmentSubmissionsService {
     @InjectModel(StudentProgress.name)
     private readonly progressModel: Model<StudentProgress>,
     @InjectModel(Quiz.name) private readonly quizModel: Model<Quiz>,
+    private readonly commandBus: CommandBus,
   ) {}
 
   async attempts(
@@ -38,13 +42,21 @@ export class AssignmentSubmissionsService {
   ): Promise<AttemptIndex> {
     const index: AttemptIndex = new Map();
     if (assignmentIds.length === 0) return index;
+    // Exams past their deadline become submissions before anything is read.
+    await this.closeExpiredExams();
     const rows = await this.progressModel
       .find(
         {
           assignmentId: { $in: assignmentIds },
           ...(studentId ? { studentId } : {}),
         },
-        { assignmentId: 1, studentId: 1, score: 1, completedAt: 1 },
+        {
+          assignmentId: 1,
+          studentId: 1,
+          score: 1,
+          completedAt: 1,
+          isAutoSubmit: 1,
+        },
       )
       .lean();
     for (const r of rows) {
@@ -53,11 +65,23 @@ export class AssignmentSubmissionsService {
       const sKey = r.studentId.toString();
       byStudent.set(sKey, [
         ...(byStudent.get(sKey) ?? []),
-        { id: r._id.toString(), score: r.score, completedAt: r.completedAt },
+        {
+          id: r._id.toString(),
+          score: r.score,
+          completedAt: r.completedAt,
+          isAutoSubmit: r.isAutoSubmit ?? false,
+        },
       ]);
       index.set(aKey, byStudent);
     }
     return index;
+  }
+
+  /** Plan E5: awaited command, no background job (D13). */
+  closeExpiredExams(studentId?: string): Promise<number> {
+    return this.commandBus.execute(
+      new FinalizeExpiredExamsCommand(studentId ? { studentId } : {}),
+    );
   }
 
   /** Submission of every assigned student, in assignment.studentIds order. */
@@ -104,6 +128,7 @@ export class AssignmentSubmissionsService {
         classId: a.classId.toString(),
         quiz: toQuizRef(quizzes.get(a.quizId.toString())),
         target: { kind: a.target.kind, groupName: a.target.groupName ?? null },
+        ...examSettingsOf(a),
         dueDate: a.dueDate,
         status: a.status,
         note: a.note ?? null,

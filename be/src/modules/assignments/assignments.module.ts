@@ -18,6 +18,7 @@ import {
 } from './commands/handlers/class-membership.handlers.js';
 import { AssignmentCreatedLogHandler } from './events/assignment.events.js';
 import {
+  AnswersHiddenUntilHandler,
   AssignedQuizIdsHandler,
   AssignmentPlayAccessHandler,
 } from './queries/handlers/assignment-access.handlers.js';
@@ -61,6 +62,7 @@ import { Assignment, AssignmentSchema } from './schemas/assignment.schema.js';
     MyRemindersHandler,
     AssignedQuizIdsHandler,
     AssignmentPlayAccessHandler,
+    AnswersHiddenUntilHandler,
     // Events
     AssignmentCreatedLogHandler,
   ],

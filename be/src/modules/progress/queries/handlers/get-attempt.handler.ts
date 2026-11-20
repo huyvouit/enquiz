@@ -6,7 +6,12 @@ import { Role } from '../../../../common/enums/role.enum.js';
 import { TeachesStudentQuery } from '../../../classes/queries/impl/class-membership.queries.js';
 import { Question } from '../../../questions/schemas/question.schema.js';
 import { Quiz } from '../../../quizzes/schemas/quiz.schema.js';
-import { AttemptResult, toAttemptResult } from '../../progress.mapper.js';
+import { AnswersHiddenUntilQuery } from '../../../assignments/queries/impl/assignment.queries.js';
+import {
+  AttemptResult,
+  hideAnswers,
+  toAttemptResult,
+} from '../../progress.mapper.js';
 import { StudentProgress } from '../../schemas/student-progress.schema.js';
 import { GetAttemptQuery } from '../impl/get-attempt.query.js';
 
@@ -49,6 +54,16 @@ export class GetAttemptHandler implements IQueryHandler<GetAttemptQuery> {
     const questions = await this.questionModel
       .find({ _id: { $in: attempt.details.map((d) => d.questionId) } })
       .lean();
-    return toAttemptResult(attempt, quiz, questions);
+    const result = toAttemptResult(attempt, quiz, questions);
+    // The student waits for the due date when the teacher asked so (E12).
+    if (isOwner && attempt.mode === 'exam' && attempt.assignmentId) {
+      return hideAnswers(
+        result,
+        await this.queryBus.execute(
+          new AnswersHiddenUntilQuery(attempt.assignmentId.toString()),
+        ),
+      );
+    }
+    return result;
   }
 }
