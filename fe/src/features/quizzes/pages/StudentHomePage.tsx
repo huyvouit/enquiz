@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { ReminderBanner } from '@/features/assignments'
 import { useAuthStore } from '@/features/auth'
 import { JoinClassCard, useMyClasses } from '@/features/classes'
-import { progressApi } from '@/features/progress'
+import { useQuestMap } from '@/features/progress'
+import { errorMessage } from '@/shared/api/http'
 import { GRADE_LEVELS } from '@/shared/api/types'
 import { Card, EmptyState, ErrorBox, Mascot, Spinner } from '@/shared/components'
 import { cn } from '@/shared/lib/cn'
-import { useAsync } from '@/shared/hooks/useAsync'
 import { QuestMapNode } from '../components/QuestMapNode'
 
 /**
@@ -18,7 +18,7 @@ export function StudentHomePage() {
   const user = useAuthStore((s) => s.user)
   const myClasses = useMyClasses()
   const [grade, setGrade] = useState(user?.studentProfile?.gradeLevel ?? 1)
-  const map = useAsync(() => progressApi.map(grade), [grade])
+  const map = useQuestMap(grade)
   const [hint, setHint] = useState<string | null>(null)
 
   const stations = map.data?.stations ?? []
@@ -81,15 +81,15 @@ export function StudentHomePage() {
         ))}
       </div>
 
-      {map.loading ? <Spinner label="Đang mở bản đồ..." /> : null}
-      {map.error ? <ErrorBox message={map.error} onRetry={map.reload} /> : null}
-      {!map.loading && map.data && stations.length === 0 ? (
+      {map.isPending ? <Spinner label="Đang mở bản đồ..." /> : null}
+      {map.error ? <ErrorBox message={errorMessage(map.error)} onRetry={() => void map.refetch()} /> : null}
+      {map.data && stations.length === 0 ? (
         <EmptyState emoji="🗺️" title={`Lớp ${grade} chưa có trạm nào`}>
           Thầy cô sẽ sớm thêm bài mới nhé!
         </EmptyState>
       ) : null}
 
-      {!map.loading && stations.length > 0 ? (
+      {!map.isPending && stations.length > 0 ? (
         <div className="relative flex flex-col items-center gap-10 py-4">
           <div
             aria-hidden

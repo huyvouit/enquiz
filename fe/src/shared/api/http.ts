@@ -81,7 +81,9 @@ http.interceptors.response.use(
 /** Typed helpers: return the unwrapped `data` directly. */
 export const api = {
   get: <T>(url: string, params?: object) => http.get<T>(url, { params }).then((r) => r.data),
-  post: <T>(url: string, body?: unknown) => http.post<T>(url, body).then((r) => r.data),
+  /** `timeoutMs` for the few slow calls (default 15 s). */
+  post: <T>(url: string, body?: unknown, timeoutMs?: number) =>
+    http.post<T>(url, body, timeoutMs ? { timeout: timeoutMs } : undefined).then((r) => r.data),
   put: <T>(url: string, body?: unknown) => http.put<T>(url, body).then((r) => r.data),
   patch: <T>(url: string, body?: unknown) => http.patch<T>(url, body).then((r) => r.data),
   /** multipart/form-data upload of one file. */

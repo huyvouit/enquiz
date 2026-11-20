@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { invalidateAssignments } from '@/features/assignments'
 import { useAuthStore } from '@/features/auth'
-import { progressApi, type AnswerFeedback, type SessionView } from '@/features/progress'
+import { invalidateProgress, progressApi, type AnswerFeedback, type SessionView } from '@/features/progress'
 import { errorMessage } from '@/shared/api/http'
 import type { MatchPair } from '@/shared/api/types'
 import { Button, ErrorBox, Spinner } from '@/shared/components'
-import { useAsync } from '@/shared/hooks/useAsync'
-import { playApi } from '../api/play.api'
+import { playApi, playKeys } from '../api/play.api'
 import { playSfx } from '@/shared/sound'
 import { isAnswered } from '../lib/answers'
 import type { PlayQuiz } from '../types'
@@ -23,13 +23,20 @@ import { QuestionStage } from './QuestionStage'
  */
 export function StudentGame({ quiz, assignmentId }: { quiz: PlayQuiz; assignmentId?: string }) {
   const navigate = useNavigate()
-  const session = useAsync(() => playApi.startSession(quiz.id, assignmentId), [quiz.id, assignmentId])
-  if (session.loading) return <Spinner label={assignmentId ? 'Đang mở bài tập...' : 'Đang vào trạm...'} />
+  // Starting is a POST, but it is safe to repeat: the server resumes an open session.
+  const session = useQuery({
+    queryKey: playKeys.session(quiz.id, assignmentId),
+    queryFn: () => playApi.startSession(quiz.id, assignmentId),
+    gcTime: 0,
+    staleTime: Infinity,
+    retry: false,
+  })
+  if (session.isPending) return <Spinner label={assignmentId ? 'Đang mở bài tập...' : 'Đang vào trạm...'} />
   if (session.error || !session.data) {
     // e.g. 409 "Cô đã đóng bài tập này rồi em nhé" or 404 when not assigned.
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4">
-        <ErrorBox message={session.error ?? 'Không mở được bài'} />
+        <ErrorBox message={session.error ? errorMessage(session.error) : 'Không mở được bài'} />
         <Button variant="secondary" onClick={() => navigate(assignmentId ? '/assignments' : '/home')}>
           {assignmentId ? '📬 Về bài tập' : '🗺️ Về bản đồ'}
         </Button>
@@ -101,6 +108,8 @@ function Game({
       void useAuthStore.getState().refreshProfile().catch(() => {})
       // Homework states, reminders and the 📬 badge changed.
       void invalidateAssignments()
+      // Map, history, results and leaderboards changed.
+      void invalidateProgress()
       navigate(`/attempts/${result.attemptId}`, { replace: true, state: { result } })
     } catch (err) {
       setError(errorMessage(err))

@@ -1,8 +1,9 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { homePathFor, useAuthStore } from '@/features/auth'
+import { useQuery } from '@tanstack/react-query'
+import { errorMessage } from '@/shared/api/http'
 import { Button, ErrorBox, Spinner } from '@/shared/components'
-import { useAsync } from '@/shared/hooks/useAsync'
-import { playApi } from '../api/play.api'
+import { playApi, playKeys } from '../api/play.api'
 import { PreviewGame } from '../components/PreviewGame'
 import { StudentGame } from '../components/StudentGame'
 
@@ -19,13 +20,18 @@ export function PlayPage() {
   const assignmentId = params.get('assignment') ?? undefined
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
-  const quiz = useAsync(() => playApi.getQuiz(quizId), [quizId])
+  const quiz = useQuery({
+    queryKey: playKeys.quiz(quizId),
+    queryFn: () => playApi.getQuiz(quizId),
+    gcTime: 0,
+    retry: false,
+  })
 
-  if (quiz.loading) return <Spinner label="Đang chuẩn bị trò chơi..." />
+  if (quiz.isPending) return <Spinner label="Đang chuẩn bị trò chơi..." />
   if (quiz.error || !quiz.data) {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4">
-        <ErrorBox message={quiz.error ?? 'Không tìm thấy bài'} />
+        <ErrorBox message={quiz.error ? errorMessage(quiz.error) : 'Không tìm thấy bài'} />
         <Button
           variant="secondary"
           onClick={() => navigate(assignmentId ? '/assignments' : homePathFor(user))}

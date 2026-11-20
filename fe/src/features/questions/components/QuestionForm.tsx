@@ -3,8 +3,8 @@ import { errorMessage } from '@/shared/api/http'
 import { GRADE_LEVELS } from '@/shared/api/types'
 import { Button, ErrorBox, Field, Input, Select, Textarea } from '@/shared/components'
 import { cn } from '@/shared/lib/cn'
-import { useAsync } from '@/shared/hooks/useAsync'
 import { questionsApi } from '../api/questions.api'
+import { invalidateQuestions, useTopics } from '../hooks/queries'
 import {
   AUTHORABLE_TYPES,
   BLANK,
@@ -159,7 +159,7 @@ export function QuestionForm({
   const [state, setState] = useState<FormState>(() => initialState(question, defaults))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const topics = useAsync(() => questionsApi.topics(), [])
+  const topics = useTopics()
   // Caret position in the question text, for "Chèn chỗ trống".
   const caret = useRef<{ start: number; end: number } | null>(null)
 
@@ -200,6 +200,7 @@ export function QuestionForm({
       const saved = question
         ? await questionsApi.update(question.id, payload)
         : await questionsApi.create(payload)
+      void invalidateQuestions()
       onSaved(saved)
     } catch (err) {
       setError(errorMessage(err))
@@ -315,7 +316,12 @@ export function QuestionForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <ImageField value={state.mediaUrl} onChange={(url) => set('mediaUrl', url)} />
-        <AudioTextField value={state.audioText} onChange={setAudioText} />
+        <AudioTextField
+          value={state.audioText}
+          onChange={setAudioText}
+          savedText={question?.audioText}
+          audioUrl={question?.audioUrl}
+        />
       </div>
 
       <Field label="Giải thích (tuỳ chọn)" hint="Hiện cho học sinh khi trả lời sai">

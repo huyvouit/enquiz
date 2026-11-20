@@ -1,14 +1,14 @@
 import { useNavigate, useParams } from 'react-router-dom'
+import { errorMessage } from '@/shared/api/http'
 import { Button, Card, EmptyState, ErrorBox, PageHeader, Spinner } from '@/shared/components'
 import { formatDateTime } from '@/shared/lib/format'
-import { useAsync } from '@/shared/hooks/useAsync'
-import { progressApi } from '../api/progress.api'
+import { useQuizResults } from '../hooks/queries'
 
 /** /teacher/quizzes/:quizId/results — every attempt of one quiz. */
 export function QuizResultsPage() {
   const { quizId = '' } = useParams()
   const navigate = useNavigate()
-  const results = useAsync(() => progressApi.quizResults(quizId), [quizId])
+  const results = useQuizResults(quizId)
 
   const rows = results.data ?? []
   const students = new Set(rows.map((r) => r.student?.id)).size
@@ -24,10 +24,12 @@ export function QuizResultsPage() {
           </Button>
         }
       />
-      {results.loading ? <Spinner /> : null}
-      {results.error ? <ErrorBox message={results.error} onRetry={results.reload} /> : null}
+      {results.isPending ? <Spinner /> : null}
+      {results.error ? (
+        <ErrorBox message={errorMessage(results.error)} onRetry={() => void results.refetch()} />
+      ) : null}
 
-      {!results.loading && !results.error ? (
+      {results.data ? (
         <>
           <div className="mb-5 grid gap-4 sm:grid-cols-3">
             <Stat label="Lượt làm bài" value={rows.length} />

@@ -39,7 +39,7 @@ export function QuestionStage({
   feedback?: StageFeedback
   submitted?: TypedAnswer
   busy?: boolean
-  /** Teacher preview: warns when this device cannot read English aloud. */
+  /** Teacher preview: explains a listening question that has no audio yet. */
   preview?: boolean
 }) {
   const reduceMotion = useReducedMotion()
@@ -68,7 +68,9 @@ export function QuestionStage({
               className="mx-auto mb-4 max-h-72 w-auto max-w-full rounded-2xl object-contain"
             />
           ) : null}
-          {question.audioText ? <ListenButton text={question.audioText} preview={preview} /> : null}
+          {question.audioUrl || question.audioPending ? (
+            <ListenButton url={question.audioUrl} preview={preview} />
+          ) : null}
           <h1 className="font-display text-3xl font-extrabold leading-snug sm:text-4xl">
             {question.type === 'fill_in_blank' ? <WithBlank text={question.questionText} /> : question.questionText}
           </h1>

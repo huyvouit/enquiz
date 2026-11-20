@@ -5,9 +5,9 @@ import { useAuthStore } from '@/features/auth'
 import { errorMessage } from '@/shared/api/http'
 import { Button, EmptyState, ErrorBox, Mascot, PageHeader, Spinner } from '@/shared/components'
 import { cn } from '@/shared/lib/cn'
-import { useAsync } from '@/shared/hooks/useAsync'
 import { quizzesApi } from '../api/quizzes.api'
 import { QuizCard } from '../components/QuizCard'
+import { invalidateQuizzes, useQuizList } from '../hooks/queries'
 import type { QuizSummary } from '../types'
 
 type Tab = 'mine' | 'all'
@@ -17,10 +17,7 @@ export function TeacherDashboardPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('mine')
   const [assigning, setAssigning] = useState<QuizSummary | null>(null)
-  const quizzes = useAsync(
-    () => quizzesApi.list({ mine: tab === 'mine', limit: 100 }).then((page) => page.items),
-    [tab],
-  )
+  const quizzes = useQuizList(tab === 'mine')
 
   const canModify = (q: QuizSummary) => user?.role === 'admin' || q.author?.id === user?.id
 
@@ -28,7 +25,7 @@ export function TeacherDashboardPage() {
     if (!window.confirm(`Xoá bài quiz "${q.title}"? Lịch sử làm bài của học sinh vẫn được giữ lại.`)) return
     try {
       await quizzesApi.remove(q.id)
-      quizzes.setData((list) => list?.filter((x) => x.id !== q.id))
+      void invalidateQuizzes()
     } catch (err) {
       window.alert(errorMessage(err))
     }
@@ -68,9 +65,11 @@ export function TeacherDashboardPage() {
         ))}
       </div>
 
-      {quizzes.error ? <ErrorBox message={quizzes.error} onRetry={quizzes.reload} /> : null}
-      {quizzes.loading ? <Spinner /> : null}
-      {!quizzes.loading && quizzes.data?.length === 0 ? (
+      {quizzes.error ? (
+        <ErrorBox message={errorMessage(quizzes.error)} onRetry={() => void quizzes.refetch()} />
+      ) : null}
+      {quizzes.isPending ? <Spinner /> : null}
+      {quizzes.data?.length === 0 ? (
         <div className="flex flex-col items-center gap-4">
           <Mascot mood="thinking" message="Cô/thầy chưa có bài quiz nào. Tạo bài đầu tiên nhé!" />
           <EmptyState emoji="🧩" title="Chưa có bài quiz">
@@ -81,7 +80,7 @@ export function TeacherDashboardPage() {
         </div>
       ) : null}
 
-      {!quizzes.loading ? (
+      {!quizzes.isPending ? (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {quizzes.data?.map((q) => (
             <QuizCard

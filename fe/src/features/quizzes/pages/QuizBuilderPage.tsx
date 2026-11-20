@@ -20,9 +20,9 @@ import {
   Toggle,
 } from '@/shared/components'
 import { cn } from '@/shared/lib/cn'
-import { useAsync } from '@/shared/hooks/useAsync'
 import { quizzesApi } from '../api/quizzes.api'
 import { QuestionPicker } from '../components/QuestionPicker'
+import { invalidateQuizzes, useQuizDetail } from '../hooks/queries'
 import { COVER_EMOJIS, type QuizDetail, type QuizPayload } from '../types'
 
 interface BuilderState {
@@ -63,10 +63,12 @@ function fromDetail(q: QuizDetail): BuilderState {
 /** /teacher/quizzes/new and /teacher/quizzes/:id/edit — loads, then renders the form. */
 export function QuizBuilderPage() {
   const { id } = useParams()
-  const existing = useAsync(() => (id ? quizzesApi.detail(id) : Promise.resolve(undefined)), [id])
+  const existing = useQuizDetail(id)
 
-  if (existing.loading) return <Spinner />
-  if (existing.error) return <ErrorBox message={existing.error} onRetry={existing.reload} />
+  if (existing.isLoading) return <Spinner />
+  if (existing.error) {
+    return <ErrorBox message={errorMessage(existing.error)} onRetry={() => void existing.refetch()} />
+  }
   // `key` remounts the form (fresh state) when switching between quizzes.
   return <QuizBuilderForm key={id ?? 'new'} id={id} existing={existing.data} />
 }
@@ -106,6 +108,7 @@ function QuizBuilderForm({ id, existing }: { id?: string; existing?: QuizDetail 
     try {
       if (id) await quizzesApi.update(id, payload)
       else await quizzesApi.create(payload)
+      void invalidateQuizzes()
       navigate('/teacher')
     } catch (err) {
       setError(errorMessage(err))

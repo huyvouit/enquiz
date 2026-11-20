@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom'
+import { errorMessage } from '@/shared/api/http'
 import { Badge, EmptyState, ErrorBox, PageHeader, Spinner } from '@/shared/components'
 import { formatDateTime } from '@/shared/lib/format'
-import { useAsync } from '@/shared/hooks/useAsync'
-import { progressApi } from '../api/progress.api'
 import { ScoreStars } from '../components/ScoreStars'
+import { useHistory } from '../hooks/queries'
 
 /** /history — a student's past attempts. */
 export function HistoryPage() {
-  const history = useAsync(() => progressApi.history(), [])
+  const history = useHistory()
 
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="🏅 Bài đã làm" subtitle="Bấm vào một bài để xem lại đáp án" />
-      {history.loading ? <Spinner /> : null}
-      {history.error ? <ErrorBox message={history.error} onRetry={history.reload} /> : null}
+      {history.isPending ? <Spinner /> : null}
+      {history.error ? (
+        <ErrorBox message={errorMessage(history.error)} onRetry={() => void history.refetch()} />
+      ) : null}
       {history.data?.length === 0 ? (
         <EmptyState title="Em chưa làm bài nào">
           <Link to="/home" className="font-bold text-brand hover:underline">

@@ -15,8 +15,10 @@ export interface Question {
   /** fill_in_blank: contains exactly one BLANK. */
   questionText: string
   mediaUrl?: string
-  /** English text read aloud by the browser (listening). */
+  /** English text of a listening question (teachers only; students get audioUrl). */
   audioText?: string
+  /** MP3 made from audioText when the question was saved; missing = not made yet. */
+  audioUrl?: string
   tags: string[]
   yleLevel?: YleLevel
   unit?: string
@@ -135,4 +137,18 @@ export interface UploadedImage {
   url: string
   contentType: string
   size: number
+}
+
+/** GET /questions/audio/status (admin). */
+export interface AudioStatus {
+  /** The server can make audio (TTS_DRIVER is not "none"). */
+  enabled: boolean
+  missing: number
+}
+
+/** POST /questions/audio/backfill (admin): one batch. */
+export interface AudioBackfillResult {
+  generated: number
+  failed: number
+  remaining: number
 }

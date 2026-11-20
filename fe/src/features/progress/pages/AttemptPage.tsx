@@ -1,9 +1,9 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth'
+import { errorMessage } from '@/shared/api/http'
 import { Button, ErrorBox, Spinner } from '@/shared/components'
-import { useAsync } from '@/shared/hooks/useAsync'
-import { progressApi } from '../api/progress.api'
 import { ResultView } from '../components/ResultView'
+import { useAttempt } from '../hooks/queries'
 import type { AttemptResult } from '../types'
 
 /**
@@ -16,13 +16,12 @@ export function AttemptPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const fromState = (useLocation().state as { result?: AttemptResult } | null)?.result
-  const fetched = useAsync(
-    () => (fromState?.attemptId === attemptId ? Promise.resolve(fromState) : progressApi.attempt(attemptId)),
-    [attemptId],
-  )
+  const fetched = useAttempt(attemptId, fromState)
 
-  if (fetched.loading) return <Spinner />
-  if (fetched.error || !fetched.data) return <ErrorBox message={fetched.error ?? 'Không tìm thấy bài làm'} />
+  if (fetched.isPending) return <Spinner />
+  if (fetched.error || !fetched.data) {
+    return <ErrorBox message={fetched.error ? errorMessage(fetched.error) : 'Không tìm thấy bài làm'} />
+  }
 
   const result = fetched.data
   const isStudent = user?.role === 'student'
