@@ -31,7 +31,7 @@ Giáo viên gom học sinh của mình vào **lớp** để giao bài, xem thố
 
 - Command: `CreateClass`, `UpdateClass`, `RegenerateClassCode`, `JoinClass`, `BulkCreateStudents`, `RemoveStudent`, `SaveGroup`, `DeleteGroup`, `ResetPassword` (module users).
 - Query dùng chung qua `QueryBus` cho module khác: `TeachesStudentQuery` (giáo viên có dạy em này không), `ClassAccessQuery` (`manage` = chủ lớp/admin, `view` = thêm học sinh trong lớp), `StudentClassIdsQuery`.
-- Event: `StudentsJoinedClassEvent`, `StudentLeftClassEvent` → module bài tập thêm/gỡ học sinh khỏi bài giao cả lớp.
+- Command (được `await`, không dùng event để không phụ thuộc CPU sau response trên Cloud Run): `AddJoinersToAssignmentsCommand`, `RemoveLeaverFromAssignmentsCommand` → module bài tập thêm/gỡ học sinh khỏi bài giao cả lớp.
 - Collection `classes`: `name`, `code` (unique), `teacherId`, `gradeLevel`, `schoolName?`, `studentIds[]` (≤ 60, nhúng), `groups[{ _id, name, studentIds }]` (≤ 10), `status`. Index: `code`, `{ teacherId, status, createdAt }`, `studentIds` (multikey).
 - Quy tắc:
   - Lớp của giáo viên khác → **404** (không lộ lớp tồn tại).

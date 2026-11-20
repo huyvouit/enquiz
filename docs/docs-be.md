@@ -771,7 +771,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 | --- | --- | --- |
 | Command | Ý định thay đổi dữ liệu, có đúng một handler | `CreateQuestionCommand`, `FinishQuizSessionCommand` |
 | Query | Yêu cầu đọc, không thay đổi gì | `ListQuestionsQuery`, `GetLeaderboardQuery` |
-| Event | Sự việc đã xảy ra, 0..n handler | `QuizCompletedEvent`, `StudentsJoinedClassEvent` |
+| Event | Sự việc đã xảy ra, 0..n handler | `QuizCompletedEvent`, `AssignmentCreatedEvent` |
 
 ```ts
 // commands/impl — Command<T> khai báo kiểu kết quả, nên commandBus.execute() có kiểu đúng
@@ -792,7 +792,11 @@ export class CreateQuestionHandler implements ICommandHandler<CreateQuestionComm
 }
 ```
 
-**Event để tách rời module:** khi học sinh vào lớp, `classes` chỉ phát `StudentsJoinedClassEvent`; module `assignments` tự lắng nghe và thêm học sinh vào các bài tập cả lớp còn hạn (`AddJoinersToAssignmentsHandler`). `classes` không cần biết `assignments` tồn tại. Tương tự, sau khi nộp bài `FinishQuizSessionHandler` phát `QuizCompletedEvent` — muốn thêm huy hiệu hay thông báo chỉ cần thêm một `@EventsHandler`, không sửa luồng nộp bài.
+**Event để tách rời module:** sau khi nộp bài, `FinishQuizSessionHandler` phát `QuizCompletedEvent`. Muốn thêm huy hiệu hay thông báo chỉ cần thêm một `@EventsHandler`, không sửa luồng nộp bài.
+
+**Khi nào KHÔNG dùng event:** handler của event chạy *sau* khi response đã trả về, không ai chờ nó và lỗi của nó không tới tay người gọi. Trước giai đoạn 4, khi học sinh vào lớp, `classes` phát `StudentsJoinedClassEvent` để `assignments` thêm em vào các bài tập cả lớp còn hạn. Cách này có hai vấn đề: request tiếp theo có thể chưa thấy bài tập (test e2e chỉ pass nhờ handler chạy kịp), và trên Cloud Run CPU bị hạ sau khi trả response nên handler có thể bị treo. Nay `classes` gửi `AddJoinersToAssignmentsCommand` và `await this.commandBus.execute(...)`: vẫn không import service của `assignments`, nhưng việc ghi xong trước khi trả response.
+
+Quy tắc: dữ liệu **phải đúng ngay** (nhất quán) → command được `await`; tác dụng phụ **có thể trễ hoặc mất** mà không sao (log, thông báo) → event.
 
 **Đánh đổi:** CQRS sinh nhiều file hơn (mỗi thao tác một cặp impl + handler). Với dự án nhỏ, một `Service` thông thường là đủ; EnQuiz chọn CQRS vì nhiều module cần hỏi nhau mà không phụ thuộc vòng.
 
