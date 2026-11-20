@@ -310,7 +310,7 @@ student_progress.mode, isAutoSubmit    // E7
 
 ### Kết quả 4.1
 
-> Ngày: 2026-11-20 · Nhánh `feat/4.1-security-debt` (chưa commit) · Trạng thái: **code xong**; D18 chờ thử bucket thật ở 4.0
+> Ngày: 2026-11-20 · [PR #2](https://github.com/huyvouit/enquiz/pull/2) đã merge vào `main` (merge commit `f836b41`) · Trạng thái: **code xong**; D18 chờ thử bucket thật ở 4.0
 
 **Đã làm**
 
@@ -328,9 +328,10 @@ student_progress.mode, isAutoSubmit    // E7
 - Backend: lint, prettier sạch; **60 unit** test pass (13 mới: tạo âm thanh, request gửi Google, lỗi không lộ khoá, `audioPending`, xoá bù); **47 e2e** test pass (3 mới: đổi/bỏ chữ thì đổi/bỏ âm thanh, chỉ admin tạo bù, nhập lại CSV xoá âm thanh); build thành công.
 - e2e xác nhận: dữ liệu chơi **không chứa** chữ của câu đọc; file âm thanh tải được với `audio/mpeg`.
 - Frontend: lint và build sạch.
+- **CI trên PR #2:** xanh cả 3 job (backend, frontend, docker).
 - **Chưa kiểm tra:**
   - Gọi Google Text-to-Speech thật (cần khoá API, làm ở 4.0); giọng `en-GB` mặc định chưa được nghe thử.
-  - Chưa chạy thử giao diện trên trình duyệt: phát âm thanh, thanh tạo bù, và các màn hình đã chuyển sang TanStack Query (đặc biệt: sau khi nộp bài, bản đồ và lịch sử phải cập nhật ngay).
+  - Chưa ghi nhận kết quả chạy thử giao diện trên trình duyệt: phát âm thanh, thanh tạo bù, và các màn hình đã chuyển sang TanStack Query (đặc biệt: sau khi nộp bài, bản đồ và lịch sử phải cập nhật ngay).
 
 **Phát hiện và đã sửa trong lúc làm**
 - Nhập lại CSV không xoá được trường đã để trống (lỗi có từ Giai đoạn 3), sẽ làm âm thanh cũ còn lại sau khi bỏ câu đọc.
