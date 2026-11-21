@@ -112,7 +112,11 @@ prepare() {
     run npm ci --no-audit --no-fund
     VITE_LIVE_URL="$run_url" VITE_SITE_URL="$SITE_URL" \
       VITE_APP_VERSION="$VERSION" VITE_GIT_COMMIT="$COMMIT" run npm run build
-    run firebase hosting:channel:deploy "$RTAG" --only app --expires 30d --project "$PROJECT_ID"
+    # pinTag (firebase.json, experimental in the CLI): /api of this release is
+    # pinned to the newest revision, i.e. the one just deployed with tag $RTAG.
+    # The preview channel therefore tests the new backend, and after promote
+    # (clone) the site and its API move together; rollback too.
+    FIREBASE_CLI_EXPERIMENTS=pintags run firebase hosting:channel:deploy "$RTAG" --only app --expires 30d --project "$PROJECT_ID"
   )
   local preview_url=""
   if [ -z "$DRY_RUN" ]; then
@@ -126,7 +130,7 @@ prepare() {
   Version     $TAG ($COMMIT)
   API (test)  $api_url/api/v1/health
   Site (test) ${preview_url:-<preview channel URL>}
-              Its /api calls still go to the live backend until promote.
+              Its /api calls go to revision $RTAG (pinTag), not to live traffic.
   Changes     see CHANGELOG.md, section [$VERSION]
 
   Production is unchanged. After the owner confirms:

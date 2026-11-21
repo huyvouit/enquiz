@@ -8,7 +8,8 @@
         "source": "/api/**",
         "run": {
           "serviceId": "enquiz-api",
-          "region": "asia-southeast1"
+          "region": "asia-southeast1",
+          "pinTag": true
         }
       },
       {
