@@ -293,6 +293,8 @@ Bản đang chạy trước `v1.0.0` không có tag. Muốn quay về bản đó
 | Phiên bản | Ngày | Cloud Run revision | Ghi chú |
 | --- | --- | --- | --- |
 | (trước v1.0.0) | 2026-11-21 | `enquiz-api-00006` | image `85ab510`, deploy bằng tay |
+| v1.0.0 | 2026-11-21 | `enquiz-api-00009` (tag `v1-0-0`) | Chỉ `prepare`, **không promote** (đi thẳng lên v1.1.0) |
+| **v1.1.0** | 2026-11-21 | `enquiz-api-00010` (tag `v1-1-0`) | Promote; site chính ghim `/api` vào `v1-1-0`; bật CORS bucket; đặt lại mật khẩu 4 tài khoản (D26) |
 
 ### App cài được (PWA) và cập nhật trên máy người dùng (6.3, 6.4)
 

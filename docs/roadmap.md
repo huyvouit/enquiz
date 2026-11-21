@@ -43,11 +43,11 @@ Kế hoạch, quyết định D19 và L1–L12 (đã chốt), kết quả từng
 
 ## 📱 Giai đoạn 6 – Bảo mật Auth, PWA & Quản lý phiên bản
 Kế hoạch: [phase-6-plan.md](phase-6-plan.md) (lập và chốt D21–D25 ngày 2026-11-21). Thứ tự: 6.5 → 6.1 → 6.3 → 6.4 → 6.2.
-- [ ] **6.1 Token:** `access_token` trên RAM + `refresh_token` qua HttpOnly Cookie (`SameSite=Strict`, `Path=/api/v1/auth`). Chung domain nhờ rewrite của Firebase Hosting (4.0). **Lưu ý:** Firebase Hosting chỉ chuyển tiếp cookie tên `__session` sang Cloud Run, nên cookie refresh phải đặt tên `__session`
+- [x] **6.1 Token** (v1.1.0)**:** `access_token` trên RAM + `refresh_token` qua HttpOnly Cookie (`SameSite=Strict`, `Path=/api/v1/auth`). Chung domain nhờ rewrite của Firebase Hosting (4.0). **Lưu ý:** Firebase Hosting chỉ chuyển tiếp cookie tên `__session` sang Cloud Run, nên cookie refresh phải đặt tên `__session`
 - [ ] **6.2 OAuth Google cho giáo viên** (Google Workspace for Education nếu trường dùng); gộp tài khoản chỉ khi email đã xác minh. Không làm Facebook: học sinh 6–11 tuổi, Facebook yêu cầu từ 13 tuổi
-- [ ] **6.3 PWA:** `vite-plugin-pwa`, manifest `standalone` cho tablet/mobile, cache tài nguyên & ảnh từ Cloud Storage
-- [ ] **6.4 Cập nhật phiên bản:** báo bản mới qua service worker (`registerType: 'prompt'`); thêm cờ `forceUpdate` khi cần ép cập nhật bắt buộc
-- [ ] **6.5 Quản lý phiên bản deploy:** mỗi lần phát hành có số phiên bản (ví dụ `v1.2.0`) gắn với git tag và tag image Cloud Run; hiện phiên bản ở `/health` và chân trang; ghi CHANGELOG; deploy chỉ khi chủ dự án xác nhận; rollback theo số phiên bản (Cloud Run revision và Firebase release tương ứng)
+- [x] **6.3 PWA** (v1.1.0)**:** `vite-plugin-pwa`, manifest `standalone` cho tablet/mobile, cache tài nguyên & ảnh từ Cloud Storage
+- [x] **6.4 Cập nhật phiên bản** (v1.1.0)**:** báo bản mới qua service worker (`registerType: 'prompt'`); thêm cờ `forceUpdate` khi cần ép cập nhật bắt buộc
+- [x] **6.5 Quản lý phiên bản deploy** (v1.0.0 chuẩn bị, v1.1.0 phát hành)**:** mỗi lần phát hành có số phiên bản (ví dụ `v1.2.0`) gắn với git tag và tag image Cloud Run; hiện phiên bản ở `/health` và chân trang; ghi CHANGELOG; deploy chỉ khi chủ dự án xác nhận; rollback theo số phiên bản (Cloud Run revision và Firebase release tương ứng)
 
 ## 🗂️ Backlog / Ý tưởng
 - Đặt lại mật khẩu qua email

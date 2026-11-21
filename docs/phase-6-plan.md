@@ -208,7 +208,7 @@ Thứ tự (đã chốt): **6.5 → 6.1 → 6.3 → 6.4 → 6.2**; 4.3 vẫn t�
 
 ### Kết quả 6.5
 
-> Ngày: 2026-11-21 · Nhánh `feat/6.5-versioning` (chưa commit) · Trạng thái: **code xong**, chưa phát hành `v1.0.0` (chờ merge, rồi `release.sh prepare` và chủ dự án xác nhận)
+> Ngày: 2026-11-21 · PR #12, #14 · Trạng thái: **xong**. `v1.0.0` chỉ chạy `prepare` (không promote); **`v1.1.0` là bản đầu tiên phát hành theo quy trình** (xem "Phát hành v1.1.0" dưới đây)
 
 **Đã làm**
 
@@ -233,7 +233,7 @@ Thứ tự (đã chốt): **6.5 → 6.1 → 6.3 → 6.4 → 6.2**; 4.3 vẫn t�
 
 ### Kết quả 6.1
 
-> Ngày: 2026-11-21 · Nhánh `feat/6.1-sessions` (chưa commit) · Trạng thái: **code xong**, chưa phát hành (dự kiến `v1.1.0`; `v1.0.0` vẫn chờ chủ dự án đồng ý `promote`)
+> Ngày: 2026-11-21 · PR #13 · Trạng thái: **xong, đã phát hành `v1.1.0`**
 
 **Đã làm**
 
@@ -262,7 +262,7 @@ Thứ tự (đã chốt): **6.5 → 6.1 → 6.3 → 6.4 → 6.2**; 4.3 vẫn t�
 
 ### Kết quả 6.3 và 6.4
 
-> Ngày: 2026-11-21 · Cùng nhánh `feat/6.1-sessions` (chưa commit) · Trạng thái: **code xong**, chưa phát hành (đề xuất gộp với 6.1 thành `v1.1.0`)
+> Ngày: 2026-11-21 · PR #13 · Trạng thái: **xong, đã phát hành `v1.1.0`**
 
 **Đã làm**
 
@@ -292,3 +292,28 @@ Thứ tự (đã chốt): **6.5 → 6.1 → 6.3 → 6.4 → 6.2**; 4.3 vẫn t�
 - Bucket không trả header CORS, nên `<img>`/`new Audio()` nhận response opaque. Cache trực tiếp những response này sẽ tốn hàng GB quota trên tablet, vì vậy service worker tự xin file ở chế độ CORS.
 - Lần mở đầu, service worker chưa đăng ký xong mà lệnh ép cập nhật đã chạy và tải lại trang. Đã sửa bằng cách chỉ coi "không có service worker" khi trình duyệt thật sự không hỗ trợ.
 - Các dev server Vite đang chạy giữ khoá file trong `fe/node_modules`, nên `npm ci` thất bại và xoá dở thư mục này. Việc kiểm tra frontend chạy trong worktree sạch, và `release.sh` giờ cũng build ở đó.
+
+### Phát hành v1.1.0 (2026-11-21)
+
+> Gồm 6.1, 6.3, 6.4 (PR #13) và mọi thay đổi của `v1.0.0`. PR chuẩn bị: #14. Chủ dự án xác nhận promote ngày 2026-11-21.
+
+**Diễn biến**
+1. **`v1.0.0` chỉ chạy `prepare`:** revision `enquiz-api-00009` (tag `v1-0-0`), kênh xem trước `v1-0-0`. Chủ dự án chọn đi thẳng lên `v1.1.0`, để mọi người chỉ phải đăng nhập lại một lần.
+2. **`prepare` v1.1.0:** build image `api:1.1.0`, deploy revision `enquiz-api-00010` với 0% traffic, health của URL tag trả `1.1.0`.
+   - Firebase CLI **từ chối deploy kênh xem trước có `pinTag` khi site chính chưa được ghim** (kiểm tra `unsafePins` nằm trong CLI).
+   - Xử lý một lần: deploy kênh xem trước không ghim, rồi dùng Hosting API tạo bản sao của version, đặt `run.tag = "v1-1-0"` và release vào kênh xem trước. Production không bị đụng tới.
+   - Sau promote, site chính được ghim, nên từ bản sau `release.sh prepare` chạy bình thường.
+3. **Kiểm tra trên kênh xem trước** (gọi API của revision mới), với một tài khoản học sinh tự đăng ký để thử, sau đó đã khoá:
+   - chân trang `v1.1.0`, service worker chạy, header `no-cache` của `sw.js`/manifest và CSP mới đúng;
+   - **cookie `__session` đi qua Firebase Hosting tới Cloud Run**; F5 vẫn giữ đăng nhập; đăng xuất, "Ghi nhớ" (7 ngày), đăng xuất mọi thiết bị đều đúng;
+   - `Origin` lạ bị từ chối 403; mật khẩu gửi dạng rõ nhận "Ứng dụng đã cũ…".
+4. **`promote`:** 100% traffic sang `enquiz-api-00010-pol`; kênh xem trước được đưa lên site chính; health và `version.json` của site chính trả `1.1.0`; git tag `v1.1.0`.
+5. **Bucket ảnh/âm thanh:** bật CORS (`origin: *`, GET/HEAD); response giờ có `Access-Control-Allow-Origin: *`.
+6. **Đặt lại mật khẩu** (D26) bằng `set:password` cho cả 4 tài khoản production (admin, giáo viên, 2 học sinh). Mật khẩu do script sinh, ghi trong ghi chú riêng ở máy. Cả 4 đăng nhập được trên production; mật khẩu cũ bị từ chối (401).
+7. **Kiểm tra trên site chính:** trang do service worker điều khiển; cài được (không có lỗi khả năng cài đặt); file âm thanh tải qua service worker là response `cors`, được lưu vào `enquiz-media`, lần tải sau mất 4 ms; không lỗi console.
+
+**Phát hiện**
+- Trên Windows, Git Bash không có `gcloud` trong PATH, nên thêm PATH vào `.env.release` (đã có ghi chú trong `.env.release.example`).
+- Các dev server và `vite preview` cũ giữ khoá file trong `node_modules`, nên `npm ci` thất bại và một lần deploy nhầm `dist` cũ lên kênh xem trước. Đã sửa: `release.sh` build trong worktree tạm (6.4), lần chạy lại dùng worktree mới.
+- Từ v1.1.0, rollback = đưa bản Hosting cũ lên lại (API đi theo vì được ghim) **cộng** chuyển traffic (cho socket). Rollback về trước v1.1.0 sẽ làm 4 tài khoản đã đặt lại mật khẩu không đăng nhập được, vì bản cũ không hiểu mật khẩu đã hash.
+
