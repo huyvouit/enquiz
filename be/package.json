@@ -27,7 +27,9 @@
     "migrate:phase2": "node scripts/migrate-phase2.mjs",
     "seed:content": "nest build && node dist/cli/seed-content.js",
     "create:admin": "nest build && node dist/cli/create-admin.js",
-    "migrate:phase3": "node scripts/migrate-phase3.mjs"
+    "migrate:phase3": "node scripts/migrate-phase3.mjs",
+    "backup:db": "node scripts/backup-db.mjs",
+    "restore:db": "node scripts/restore-db.mjs"
   },
   "dependencies": {
     "@google-cloud/storage": "^9.0.0",

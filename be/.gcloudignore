@@ -12,3 +12,4 @@ coverage
 # Leading slash: only the local upload folder, not src/modules/uploads/
 # (gcloudignore matches a bare name at any depth, like .gitignore).
 /uploads
+/backups

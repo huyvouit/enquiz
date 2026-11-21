@@ -3,10 +3,15 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module.js';
+import { CloudLogger } from './common/logging/cloud-logger.js';
 import { API_PREFIX, setupApp } from './common/setup-app.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Cloud Run sets K_SERVICE: log JSON lines with a severity, so Cloud Error
+  // Reporting picks up errors (launch checklist C3). Locally: Nest's logger.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: process.env.K_SERVICE ? new CloudLogger() : undefined,
+  });
   const config = app.get(ConfigService);
 
   // Behind Firebase Hosting + Cloud Run, req.ip (used by the rate limits) is
