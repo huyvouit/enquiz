@@ -27,6 +27,7 @@ Quy tắc chung, cách chạy và danh sách tính năng: xem [README gốc](../
 | `JWT_SECRET` | — (bắt buộc, ≥ 16 ký tự) | Khoá ký JWT |
 | `JWT_EXPIRES_IN` | `7d` | Hạn token |
 | `CORS_ORIGIN` | `http://localhost:5173` | Danh sách origin, cách nhau bởi dấu phẩy |
+| `LIVE_CORS_ORIGINS` | `http://localhost:5173` | Origin được mở socket Đấu trường (`/live`) thẳng tới Cloud Run, cách nhau bởi dấu phẩy. Production: domain Firebase Hosting (D19) |
 | `SEED_DEMO_DATA` | `false` | `true` → tạo dữ liệu demo khi DB chưa có user |
 | `AUTH_RATE_LIMIT` | `10` | Số lần đăng nhập/đăng ký mỗi phút cho **một username** (chống dò mật khẩu) |
 | `AUTH_IP_RATE_LIMIT` | `100` | Số lần đăng nhập/đăng ký mỗi phút cho **một IP**; để cao vì cả trường thường dùng chung một IP |
@@ -58,10 +59,13 @@ src/
     ├── classes/              # 10 – lớp, nhóm, mã mời, tạo học sinh hàng loạt
     ├── assignments/          # 11 – bài tập, trạng thái nộp, nhắc nhở
     ├── exams/                # 14 – chế độ kiểm tra: phiên thi, lưu nháp, chấm khi nộp
+    ├── live/                 # 15 – Đấu trường: gateway Socket.io /live, máy trạng thái, phòng trong RAM
     ├── analytics/            # 12 – thống kê, bản đồ nhiệt, xuất Excel/PDF
     └── uploads/              # ảnh câu hỏi (@nestjs/storage)
-scripts/                      # migrate-phase2/3.mjs, lib.mjs (dùng chung)
+scripts/                      # migrate-phase2/3.mjs, lib.mjs (dùng chung), live-check.mjs (kiểm tra kết nối socket Đấu trường), live-load.mjs (thử tải 60 người một phòng, tạo lớp thử)
 test/app.e2e-spec.ts          # E2E giai đoạn 1–2
 test/phase3.e2e-spec.ts       # E2E giai đoạn 3
 test/exam.e2e-spec.ts         # E2E chế độ kiểm tra (4.2)
+test/live.e2e-spec.ts         # E2E socket Đấu trường: bắt tay, CORS (5.0)
+test/live-match.e2e-spec.ts   # E2E trận đấu: host/player, vào lại, khách (5.1–5.3)
 ```
