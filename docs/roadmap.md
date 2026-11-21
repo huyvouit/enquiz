@@ -31,14 +31,15 @@ Thứ tự: **4.0 → 4.1 → 4.2**; 4.3 làm song song được sau 4.0.
 - [ ] 4.0 Deploy & hạ tầng: Firebase Hosting + Cloud Run + Atlas + Cloud Storage (D12); CI; giới hạn đăng nhập theo username/IP (D14); `create:admin` (D15). **Code xong** ([kết quả](phase-4-plan.md#kết-quả-40)), chờ dựng hạ tầng
 - [ ] 4.1 Bảo mật & nợ kỹ thuật: câu nghe dùng text-to-speech ở server, không lộ `audioText` (D16); xoá bù khi tạo học sinh hàng loạt lỗi (D17); bỏ `useAsync`. **Code xong** ([kết quả](phase-4-plan.md#kết-quả-41)); thư viện lưu file (D18) chờ thử bucket thật
 - [x] 4.2 Exam Mode (E1–E13, [tài liệu 14](features/14-exam-mode.md)): đếm giờ ở server, Previous/Next, rà soát & đánh dấu, lưu nháp lên server, 1 lượt, hết giờ chấm nháp, không cộng XP/mở trạm, cho xem đáp án ngay hoặc sau hạn
-- [ ] 4.3 UX & thao tác giáo viên: chạm trên tablet, in thẻ đăng nhập, nhân bản câu, CSV mẫu, nổi câu sai nhiều, vị trí cá nhân trên bảng xếp hạng
+- [ ] 4.3 ⏸️ **Tạm hoãn** (làm Giai đoạn 5 trước) · UX & thao tác giáo viên: chạm trên tablet, in thẻ đăng nhập, nhân bản câu, CSV mẫu, nổi câu sai nhiều, vị trí cá nhân trên bảng xếp hạng
 
 ## ⚔️ Giai đoạn 5 – Đấu trường trực tuyến
-Kế hoạch: `phase-5-plan.md` (viết trước khi bắt đầu giai đoạn).
+Kế hoạch, quyết định D19 và L1–L12 (đã chốt), kết quả từng mốc: **[phase-5-plan.md](phase-5-plan.md)** · Tài liệu: [15](features/15-live-quiz.md).
 Điều kiện trên Cloud Run: `min-instances=1` + CPU luôn cấp (để không ngủ giữa trận), bật session affinity; Socket.io kết nối **thẳng domain Cloud Run** vì rewrite của Firebase Hosting không chuyển tiếp WebSocket (cần CORS cho origin Firebase); Redis adapter nếu chạy nhiều instance.
-- [ ] **5.1 Đấu trường cho học sinh đã đăng nhập (Socket.io, kiểu Kahoot):** màn hình Host (mã PIN/QR, lobby real-time, kick người chơi, đếm số nộp bài, biểu đồ đáp án, bục vinh quang) & màn hình Player (4 nút màu lớn, tính điểm tốc độ theo server timestamp); JWT handshake, tự lưu kết quả
-- [ ] **5.2 Khôi phục phiên:** Auto-Reconnect qua `sessionStorage` chống mất điểm khi F5/rớt mạng
-- [ ] **5.3 Khách vãng lai:** Guest nickname (lọc từ ngữ không phù hợp), rate limit riêng cho khách
+- [ ] **5.0 Nền tảng realtime & hạ tầng:** gateway `/live`, handshake JWT, quản lý phòng trong RAM, máy trạng thái trận. **Code xong** ([kết quả](phase-5-plan.md#kết-quả-50)); chờ thử WebSocket trên Cloud Run thật (cần hạ tầng 4.0)
+- [ ] **5.1 Đấu trường cho học sinh đã đăng nhập (Socket.io, kiểu Kahoot):** **code xong** ([kết quả](phase-5-plan.md#kết-quả-5153)), chờ thử trên Cloud Run · màn hình Host (mã PIN/QR, lobby real-time, kick người chơi, đếm số nộp bài, biểu đồ đáp án, bục vinh quang) & màn hình Player (4 nút màu lớn, tính điểm tốc độ theo server timestamp); JWT handshake, tự lưu kết quả
+- [ ] **5.2 Khôi phục phiên:** Auto-Reconnect qua `sessionStorage` chống mất điểm khi F5/rớt mạng; chờ người rớt mạng 10 giây. **Code xong**
+- [ ] **5.3 Khách vãng lai:** Guest nickname (lọc từ ngữ không phù hợp), rate limit riêng cho khách. **Code xong**
 
 ## 📱 Giai đoạn 6 – Bảo mật Auth, PWA & Quản lý phiên bản
 Kế hoạch: `phase-6-plan.md` (viết trước khi bắt đầu giai đoạn).

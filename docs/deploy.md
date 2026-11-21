@@ -96,17 +96,28 @@ TAG=$(git rev-parse --short HEAD)
 gcloud builds submit be --tag $REPO/api:$TAG
 
 gcloud run deploy enquiz-api --image=$REPO/api:$TAG --region=$REGION \
-  --allow-unauthenticated --min-instances=0 --max-instances=1 --memory=512Mi \
-  --set-env-vars=SEED_DEMO_DATA=false,TRUST_PROXY=1,CORS_ORIGIN=https://$PROJECT_ID.web.app,STORAGE_DRIVER=s3,S3_BUCKET=$BUCKET,S3_REGION=auto,S3_ENDPOINT=https://storage.googleapis.com,S3_PUBLIC_URL=https://storage.googleapis.com/$BUCKET,TTS_DRIVER=google,TTS_LANGUAGE=en-GB \
+  --allow-unauthenticated --min-instances=1 --max-instances=1 --memory=512Mi \
+  --no-cpu-throttling --session-affinity --timeout=3600 \
+  --set-env-vars=SEED_DEMO_DATA=false,TRUST_PROXY=1,CORS_ORIGIN=https://$PROJECT_ID.web.app,LIVE_CORS_ORIGINS=https://$PROJECT_ID.web.app,STORAGE_DRIVER=s3,S3_BUCKET=$BUCKET,S3_REGION=auto,S3_ENDPOINT=https://storage.googleapis.com,S3_PUBLIC_URL=https://storage.googleapis.com/$BUCKET,TTS_DRIVER=google,TTS_LANGUAGE=en-GB \
   --set-secrets=JWT_SECRET=jwt-secret:latest,MONGODB_URI=mongodb-uri:latest,AWS_ACCESS_KEY_ID=gcs-hmac-id:latest,AWS_SECRET_ACCESS_KEY=gcs-hmac-secret:latest,GOOGLE_TTS_API_KEY=tts-api-key:latest
 ```
 
 Giải thích các tham số chính:
 
 - **`--max-instances=1`:** giới hạn đăng nhập đếm trong RAM của từng instance. Nếu chạy nhiều instance thì cần chuyển bộ đếm sang Redis.
-- **`--min-instances=0`:** server tự tắt khi không có ai dùng. Lần gọi đầu sau đó mất vài giây để khởi động. Giai đoạn 5 (Socket.io) sẽ cần đặt `1`.
+- **Đấu trường trực tuyến (Giai đoạn 5, D19):**
+  - `--min-instances=1`: luôn có một máy chạy, không tắt giữa trận. Trạng thái phòng đấu nằm trong RAM của máy đó.
+  - `--no-cpu-throttling`: CPU luôn được cấp, để đồng hồ câu hỏi chạy cả khi không có request HTTP.
+  - `--session-affinity`: khi mạng trường chặn WebSocket và client lùi về long-polling, các request của một người vẫn tới cùng máy.
+  - `--timeout=3600`: một kết nối WebSocket sống tối đa 60 phút; client tự nối lại.
+  - `LIVE_CORS_ORIGINS`: origin được mở socket thẳng tới Cloud Run (Firebase Hosting không chuyển tiếp WebSocket). Có thêm domain `*.firebaseapp.com` thì đặt riêng, vì dấu phẩy trùng dấu tách của `--set-env-vars`:
+    ```bash
+    gcloud run services update enquiz-api --region=$REGION \
+      --update-env-vars="^;^LIVE_CORS_ORIGINS=https://$PROJECT_ID.web.app,https://$PROJECT_ID.firebaseapp.com"
+    ```
+  - **Chi phí:** một instance chạy liên tục, CPU luôn cấp, bị tính phí theo giờ. Ước tính bằng bảng giá Cloud Run trước khi bật. Khi chưa dùng Đấu trường, có thể tạm để `--min-instances=0` và bỏ `--no-cpu-throttling`.
 - **Probe khởi động:** dùng probe TCP mặc định là đủ. NestJS chỉ mở cổng sau khi đã kết nối xong MongoDB.
-- **Sự kiện chạy nền:** không cần bật "CPU luôn cấp". Việc thêm/gỡ học sinh khỏi bài tập đã được chạy và chờ xong ngay trong request.
+- **Sự kiện chạy nền:** việc thêm/gỡ học sinh khỏi bài tập đã được chạy và chờ xong ngay trong request (D13). "CPU luôn cấp" ở trên là vì Đấu trường, không phải vì việc này.
 
 ## 5. Frontend lên Firebase Hosting
 
@@ -115,7 +126,10 @@ firebase login
 firebase projects:addfirebase $PROJECT_ID   # gắn Firebase vào project GCP (một lần)
 cd fe
 firebase use --add $PROJECT_ID              # tạo .firebaserc; commit file này
-npm ci && npm run build                     # VITE_API_BASE_URL giữ mặc định /api/v1
+# VITE_API_BASE_URL giữ mặc định /api/v1 (đi qua rewrite của Firebase).
+# Socket Đấu trường đi thẳng tới Cloud Run (D19):
+export VITE_LIVE_URL=$(gcloud run services describe enquiz-api --region=$REGION --format='value(status.url)')
+npm ci && npm run build
 firebase deploy --only hosting
 cd ..
 ```
@@ -137,6 +151,19 @@ cd ..
 5. Xuất thử bảng điểm Excel và PDF, kiểm tra tiếng Việt có dấu hiển thị đúng.
 6. **Âm thanh câu nghe:** admin vào Kho câu hỏi, bấm **🔊 Tạo âm thanh** cho tới khi thanh báo biến mất. Mở một trạm có câu nghe bằng tài khoản học sinh: nút 🔊 phát được, và dữ liệu `/play` (tab Network) **không có** chữ của câu đọc. Nếu báo lỗi, xem log Cloud Run: thường là khoá chưa được phép gọi Text-to-Speech API.
 7. Đăng nhập thử **11 lần sai** với cùng một username. Lần thứ 11 phải bị chặn (429). Đăng nhập bằng username khác thì vẫn bình thường.
+8. **Socket Đấu trường (5.0):** chạy từ máy local, trong thư mục `be/`:
+   ```bash
+   RUN_URL=$(gcloud run services describe enquiz-api --region=$REGION --format='value(status.url)')
+   # Ẩn danh, 60 kết nối cùng lúc: phải "connected 60/60", transport websocket
+   node scripts/live-check.mjs --url $RUN_URL --clients 60 --origin https://$PROJECT_ID.web.app
+   # Bằng tài khoản học sinh: "server sees" có role student, clientIp là IP thật của bạn
+   LIVE_TOKEN=<accessToken lấy từ /auth/login> node scripts/live-check.mjs --url $RUN_URL
+   # Giữ 65 phút: mỗi kết nối bị Cloud Run cắt một lần ở phút 60 rồi tự nối lại
+   node scripts/live-check.mjs --url $RUN_URL --hold 65
+   ```
+   - `clientIp` khác IP thật thì chỉnh `TRUST_PROXY` như bước 2 (socket đọc `X-Forwarded-For` theo cùng biến).
+   - Trình duyệt báo lỗi CORS khi mở socket: kiểm tra `LIVE_CORS_ORIGINS` có đúng domain đang mở trang không.
+   - Thử tải một phòng 60 học sinh (tạo lớp và tài khoản thử, **chỉ chạy vào DB thử**, không vào dữ liệu thật): `node scripts/live-load.mjs --url $RUN_URL --players 60 --teacher <giáo viên thử>:<mật khẩu>`.
 
 ## Cập nhật và rollback
 

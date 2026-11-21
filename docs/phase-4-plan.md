@@ -1,6 +1,6 @@
 # Kế hoạch Giai đoạn 4 – Lên production, dọn nợ, Exam Mode & UX
 
-> Trạng thái: **Đang triển khai** · 4.0, 4.1: code xong, chờ dựng hạ tầng · 4.2: code xong ([tài liệu 14](features/14-exam-mode.md)), chưa chạy trên môi trường deploy · 4.3: chưa bắt đầu · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
+> Trạng thái: **Đang triển khai** · 4.0, 4.1: code xong, chờ dựng hạ tầng · 4.2: code xong ([tài liệu 14](features/14-exam-mode.md)), chưa chạy trên môi trường deploy · 4.3: **tạm hoãn** (làm Giai đoạn 5 trước, xem [phase-5-plan.md](phase-5-plan.md)) · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
 
 Bản nháp lộ trình ban đầu đặt Giai đoạn 4 là "Cải thiện UX/DX, Exam Mode & Dọn nợ nền tảng", còn việc deploy để tận Giai đoạn 6. Khi rà soát, có ba lý do khiến deploy phải lên trước:
 - Đáp án câu nghe đang bị lộ qua `audioText`.
