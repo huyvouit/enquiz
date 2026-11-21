@@ -333,7 +333,7 @@ student_progress           mode ('classic' mặc định), isAutoSubmit
 
 ### Kết quả dựng hạ tầng 4.0
 
-> Ngày: 2026-11-21 · PR [#5](https://github.com/huyvouit/enquiz/pull/5) (`GcsDisk`), [#6](https://github.com/huyvouit/enquiz/pull/6) (4.0b), [#7](https://github.com/huyvouit/enquiz/pull/7) (sửa lỗi khi deploy) · Trạng thái: **production đang chạy** theo [deploy.md](deploy.md). ID project, tên site, bucket chỉ ghi ở máy người deploy, không có trong repo.
+> Ngày: 2026-11-21 · PR [#5](https://github.com/huyvouit/enquiz/pull/5) (`GcsDisk`), [#6](https://github.com/huyvouit/enquiz/pull/6) (4.0b), [#7](https://github.com/huyvouit/enquiz/pull/7) (sửa lỗi khi deploy), [#8](https://github.com/huyvouit/enquiz/pull/8) (ghi kết quả; merge commit `b983de1`, CI xanh cả 3 job) · Trạng thái: **production đang chạy** theo [deploy.md](deploy.md). ID project, tên site, bucket chỉ ghi ở máy người deploy, không có trong repo.
 
 **Đã làm**
 - Atlas (cluster riêng cho production), Cloud Storage (bucket đọc công khai), Secret Manager (JWT, Mongo, khoá Text-to-Speech), Cloud Run (tài khoản chạy riêng, không có khoá dài hạn nào; chế độ tiết kiệm), Firebase Hosting (site riêng).
