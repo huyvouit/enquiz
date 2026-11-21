@@ -119,11 +119,11 @@ Repo là **public**: tài liệu này và mọi commit không chứa ID project,
 ## Phần C: việc dựng và vận hành (làm cùng deploy)
 
 - **C1. Cảnh báo ngân sách:** ✅ đã đặt (2026-11-21): ngưỡng rất thấp, chỉ cho project này, email ngay khi phát sinh chi phí; tự dọn image cũ và file tạm của Cloud Build. Xem `deploy.md`, mục "Giữ chi phí bằng 0".
-- **C2. Backup Atlas:** chạy `mongodump` định kỳ (script và lịch), hoặc nâng gói có backup.
-- **C3.** Error Reporting, uptime check, cảnh báo email (xem mục 17).
+- **C2. Backup Atlas:** ✅ `npm run backup:db` / `restore:db` (đã thử khôi phục: dữ liệu giống hệt, đủ index); đã sao lưu production lần đầu (2026-11-21). Chạy tay hằng tuần; lịch tự động để sau.
+- **C3.** ✅ Error Reporting: backend ghi log JSON trên Cloud Run (`CloudLogger`); đã thử một lỗi mẫu, Error Reporting nhận và gom nhóm. ✅ Uptime check `/api/v1/health` mỗi 15 phút từ 3 vùng. Email cảnh báo: **tạm bỏ qua** (2026-11-21); xem lỗi và trạng thái trên Console.
 - **C4. Đổi mật khẩu DB dev** (đã nhắc trước đây). DB production đã tách riêng (cluster mới) ✅. Thêm: đặt lại mật khẩu `teacher`/`student` của production, vì đang trùng tài khoản demo trong repo.
-- **C5.** Thử rollback một lần.
-- **C6.** Lighthouse trên điện thoại cho trang đăng nhập, bản đồ, màn chơi.
+- **C5.** ✅ Đã thử (2026-11-21): chuyển traffic về revision trước ~25 giây, trả về bản mới ~5 giây, `/health` luôn 200; nhận ra bản đang chạy nhờ một route chỉ bản mới có.
+- **C6.** ✅ Lighthouse trang đăng nhập (production): điện thoại Hiệu năng 94 (LCP 2,3 s, CLS 0), Trợ năng 93, Thực hành tốt 100, SEO 100; máy tính 100/93/100/100. Trợ năng bị trừ vì link trong câu chỉ khác màu: đã thêm gạch chân. Các trang sau đăng nhập chưa đo (Lighthouse cần phiên đăng nhập).
 - **C7.** Đồng ý của phụ huynh (Nghị định 13/2023): chặn việc mở cho trường thật, không chặn bản thử nghiệm.
 
 ## Thứ tự đề xuất
