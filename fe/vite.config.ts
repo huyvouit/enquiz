@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 import { seo } from './seo.plugin.ts'
 
 /**
@@ -40,9 +41,44 @@ const versionFile: Plugin = {
   },
 }
 
+/**
+ * Installable app + service worker (plan 6.3, D24) with an update prompt
+ * (6.4, D25). The worker is our own sw/sw.ts (injectManifest), registered by
+ * src/app/pwa/UpdatePrompt.tsx.
+ */
+const pwa = VitePWA({
+  strategies: 'injectManifest',
+  srcDir: 'sw',
+  filename: 'sw.ts',
+  registerType: 'prompt',
+  injectRegister: false,
+  manifest: {
+    name: 'EnQuiz – Vừa học vừa chơi tiếng Anh',
+    short_name: 'EnQuiz',
+    description: 'Học tiếng Anh tiểu học qua trò chơi, bài tập và Đấu trường cho cả lớp.',
+    lang: 'vi',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'any',
+    background_color: '#fffbeb',
+    theme_color: '#4f46e5',
+    icons: [
+      { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  },
+  injectManifest: {
+    globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+    // Only for link previews; never needed by the app.
+    globIgnores: ['og-image.png'],
+  },
+})
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), tailwindcss(), seo(loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL), versionFile],
+  plugins: [react(), tailwindcss(), seo(loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL), versionFile, pwa],
   // Resolves the "@/*" alias declared in tsconfig.app.json.
   resolve: { tsconfigPaths: true },
   server: {

@@ -89,6 +89,15 @@ gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
 
 Nếu tổ chức chặn `allUsers` (Public Access Prevention), ảnh và âm thanh sẽ không tải được. Khi đó cần tắt chính sách này cho riêng bucket.
 
+**CORS cho cache của app (6.3):** service worker chỉ cache ảnh/âm thanh khi bucket trả header CORS (response "opaque" chiếm hàng MB quota mỗi file trong Chrome). Thiếu CORS thì file vẫn tải bình thường, chỉ không được cache. Bật một lần:
+```bash
+cat > cors.json <<'EOF'
+[{"origin": ["*"], "method": ["GET", "HEAD"], "responseHeader": ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"], "maxAgeSeconds": 3600}]
+EOF
+gcloud storage buckets update gs://$BUCKET --cors-file=cors.json
+```
+`"*"` là đủ an toàn: bucket vốn đã công khai, và app gửi request không kèm cookie.
+
 ## 3. Secret Manager
 
 ```bash
