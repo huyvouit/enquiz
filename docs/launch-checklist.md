@@ -118,10 +118,10 @@ Repo là **public**: tài liệu này và mọi commit không chứa ID project,
 
 ## Phần C: việc dựng và vận hành (làm cùng deploy)
 
-- **C1. Cảnh báo ngân sách:** Billing → Budgets & alerts, đặt ngưỡng (ví dụ 10 USD/tháng) gửi email ở 50%, 90%, 100%. Quan trọng vì Đấu trường bật thì tính phí theo giờ.
+- **C1. Cảnh báo ngân sách:** ✅ đã đặt (2026-11-21): ngưỡng rất thấp, chỉ cho project này, email ngay khi phát sinh chi phí; tự dọn image cũ và file tạm của Cloud Build. Xem `deploy.md`, mục "Giữ chi phí bằng 0".
 - **C2. Backup Atlas:** chạy `mongodump` định kỳ (script và lịch), hoặc nâng gói có backup.
 - **C3.** Error Reporting, uptime check, cảnh báo email (xem mục 17).
-- **C4. Đổi mật khẩu DB dev** (đã nhắc trước đây) và giữ DB production tách riêng.
+- **C4. Đổi mật khẩu DB dev** (đã nhắc trước đây). DB production đã tách riêng (cluster mới) ✅. Thêm: đặt lại mật khẩu `teacher`/`student` của production, vì đang trùng tài khoản demo trong repo.
 - **C5.** Thử rollback một lần.
 - **C6.** Lighthouse trên điện thoại cho trang đăng nhập, bản đồ, màn chơi.
 - **C7.** Đồng ý của phụ huynh (Nghị định 13/2023): chặn việc mở cho trường thật, không chặn bản thử nghiệm.

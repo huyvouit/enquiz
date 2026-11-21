@@ -117,7 +117,7 @@ gcloud builds submit be --tag $REPO/api:$TAG
 
 gcloud run deploy enquiz-api --image=$REPO/api:$TAG --region=$REGION \
   --service-account=$RUN_SA --allow-unauthenticated \
-  --min-instances=0 --max-instances=1 --memory=512Mi \
+  --min-instances=0 --max-instances=1 --concurrency=500 --memory=512Mi \
   --session-affinity --timeout=3600 \
   --set-env-vars="^;^SEED_DEMO_DATA=false;TRUST_PROXY=2;LIVE_TRUST_PROXY=1;CORS_ORIGIN=https://$SITE.web.app;LIVE_CORS_ORIGINS=https://$SITE.web.app,https://$SITE.firebaseapp.com;STORAGE_DRIVER=gcs;GCS_BUCKET=$BUCKET;TTS_DRIVER=google;TTS_LANGUAGE=en-GB" \
   --set-secrets=JWT_SECRET=jwt-secret:latest,MONGODB_URI=mongodb-uri:latest,GOOGLE_TTS_API_KEY=tts-api-key:latest
@@ -129,12 +129,15 @@ Giải thích các tham số chính:
 - **`^;^` trong `--set-env-vars`:** đổi dấu tách thành `;`, để `LIVE_CORS_ORIGINS` chứa được dấu phẩy.
 - **`TRUST_PROXY=2`, `LIVE_TRUST_PROXY=1`:** HTTP đi qua hai proxy (Firebase Hosting rồi Cloud Run), còn socket Đấu trường đi thẳng vào Cloud Run (một proxy). Tin nhiều proxy hơn thực tế thì client giả được IP bằng header `X-Forwarded-For`, và lách được giới hạn theo IP. Đã đo trên hạ tầng thật: với 1 thì HTTP thấy IP của Google; với 2 thì đúng IP thật. Ai gọi thẳng `run.app` vẫn giả được IP cho HTTP; giới hạn theo username (D14) vẫn chặn dò mật khẩu.
 - **`--max-instances=1`:** giới hạn đăng nhập và phòng Đấu trường nằm trong RAM của từng instance. Nếu chạy nhiều instance thì cần chuyển sang Redis.
-- **Chế độ tiết kiệm (mặc định):** `--min-instances=0` và CPU chỉ cấp khi có request. Không có ai dùng thì không tốn tiền. Mọi tính năng chạy bình thường, **trừ Đấu trường**: đồng hồ câu hỏi chỉ chạy khi CPU được cấp, và máy có thể bị tắt giữa trận.
-- **Bật Đấu trường (D19)** trước giờ lớp chơi hoặc khi chạy bước 8 của mục 6, tắt lại khi xong:
+- **`--concurrency=500`:** số request một máy nhận cùng lúc (mặc định 80). Mỗi WebSocket đang mở tính là một request, và chỉ có một máy, nên với 80 thì một phòng 60 em cộng màn chiếu và các request REST bị Cloud Run trả **429** (đã gặp khi thử tải). Node giữ hàng trăm socket rảnh được; thông số này không tốn thêm tiền.
+- **Chế độ tiết kiệm (mặc định, dùng cả cho Đấu trường):** `--min-instances=0` và CPU chỉ cấp khi có request. Không có ai dùng thì máy tắt, không tốn tiền. Kết nối WebSocket đang mở là một request, nên trong trận CPU luôn được cấp và đồng hồ câu hỏi chạy bình thường. Đã thử trên hạ tầng thật: phòng 60 học sinh chạy trọn (bước 8). Rủi ro còn lại:
+  - người đầu tiên vào sau lúc rảnh chờ máy khởi động vài giây;
+  - phòng nằm trong RAM: nếu **mọi** kết nối đều đứt và máy rảnh đủ lâu để bị tắt, phòng mất.
+- **Luôn bật một máy (tuỳ chọn, D19 ban đầu):** chỉ cần nếu chế độ tiết kiệm gây lỗi khi lớp chơi thật. Tính phí theo từng giây máy chạy, kể cả lúc không ai dùng (khoảng 0,07 USD/giờ, kiểm tra bảng giá); quên tắt cả tháng là hàng chục USD.
   ```bash
-  # Bật: luôn có một máy chạy, CPU luôn cấp (tính phí theo giờ, xem bảng giá Cloud Run)
+  # Bật trước giờ học
   gcloud run services update enquiz-api --region=$REGION --min-instances=1 --no-cpu-throttling
-  # Tắt: quay về chế độ tiết kiệm
+  # Tắt ngay sau giờ học
   gcloud run services update enquiz-api --region=$REGION --min-instances=0 --cpu-throttling
   ```
   - `--session-affinity`: khi mạng trường chặn WebSocket và client lùi về long-polling, các request của một người vẫn tới cùng máy.
@@ -178,7 +181,7 @@ cd ..
 5. Xuất thử bảng điểm Excel và PDF, kiểm tra tiếng Việt có dấu hiển thị đúng.
 6. **Âm thanh câu nghe:** admin vào Kho câu hỏi, bấm **🔊 Tạo âm thanh** cho tới khi thanh báo biến mất. Mở một trạm có câu nghe bằng tài khoản học sinh: nút 🔊 phát được, và dữ liệu `/play` (tab Network) **không có** chữ của câu đọc. Nếu báo lỗi, xem log Cloud Run: thường là khoá chưa được phép gọi Text-to-Speech API.
 7. Đăng nhập thử **11 lần sai** với cùng một username. Lần thứ 11 phải bị chặn (429). Đăng nhập bằng username khác thì vẫn bình thường.
-8. **Socket Đấu trường (5.0):** bật Đấu trường (mục 4) rồi chạy từ máy local, trong thư mục `be/`:
+8. **Socket Đấu trường (5.0):** chạy từ máy local, trong thư mục `be/` (chế độ tiết kiệm là đủ):
    ```bash
    RUN_URL=$(gcloud run services describe enquiz-api --region=$REGION --format='value(status.url)')
    # Ẩn danh, 60 kết nối cùng lúc: phải "connected 60/60", transport websocket
@@ -190,8 +193,8 @@ cd ..
    ```
    - `clientIp` khác IP thật thì chỉnh `LIVE_TRUST_PROXY` (socket đi thẳng vào Cloud Run, thường là 1).
    - Trình duyệt báo lỗi CORS khi mở socket: kiểm tra `LIVE_CORS_ORIGINS` có đúng domain đang mở trang không.
-   - Thử tải một phòng 60 học sinh (tạo lớp và tài khoản thử, **chỉ chạy vào DB thử**, không vào dữ liệu thật): `node scripts/live-load.mjs --url $RUN_URL --players 60 --teacher <giáo viên thử>:<mật khẩu>`.
-   - Xong thì tắt Đấu trường (mục 4) nếu chưa dùng thật.
+   - Thử tải một phòng 60 học sinh: `node scripts/live-load.mjs --url $RUN_URL --players 60 --teacher <giáo viên>:<mật khẩu>`. `--url` phải là địa chỉ Cloud Run (script dùng một địa chỉ cho cả REST và socket; Firebase không chuyển tiếp WebSocket). Script tạo một lớp "Tải thử …" với 60 tài khoản: chạy trước khi có dữ liệu thật, rồi xoá lớp và tài khoản đó.
+   - Kết quả lần đầu (2026-11-21, từ Việt Nam): 60/60 kết nối, nhận trả lời median ~80 ms; phòng 60 em: câu hỏi tới đủ 60 máy sau 86–114 ms, nhận câu trả lời median ~72 ms, 60/60 máy tới bục vinh quang.
 9. **Header bảo mật và SEO** ([launch-checklist.md](launch-checklist.md) A6, B3):
    ```bash
    curl -sI https://$SITE.web.app/login | grep -iE 'content-security-policy|x-frame-options|strict-transport'
@@ -204,7 +207,7 @@ cd ..
 
 Với lượng dùng thử nghiệm, mọi dịch vụ nằm trong hạn mức miễn phí, **miễn là**:
 
-- Cloud Run ở chế độ tiết kiệm (`--min-instances=0`, CPU chỉ cấp khi có request). Bật Đấu trường (mục 4) là tính phí theo giờ: chỉ bật khi lớp chơi, chơi xong tắt ngay.
+- Cloud Run ở chế độ tiết kiệm (`--min-instances=0`, CPU chỉ cấp khi có request); Đấu trường chạy được ở chế độ này. "Luôn bật một máy" (mục 4) tính phí theo giờ: chỉ dùng khi thật cần, xong tắt ngay.
 - Không bật Cloud Armor, load balancer, IP tĩnh hay domain trả phí.
 
 Ngân sách trên Google Cloud **chỉ gửi email**, không tự chặn chi phí. Đặt cảnh báo ở mức thấp, chỉ cho project này (đơn vị tiền phải trùng với tài khoản thanh toán, ví dụ `VND`):

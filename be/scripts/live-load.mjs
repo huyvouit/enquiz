@@ -1,12 +1,14 @@
 /**
  * Live quiz load test (plan 5.1): one room, N students answering together.
- * Creates a throwaway class of N student accounts, so run it against a
- * local or test database, not production data:
+ * Creates a throwaway class "Tải thử …" of N student accounts: run it
+ * before real users exist, then delete that class and its accounts:
  *
  *   node scripts/live-load.mjs --url http://localhost:3000 --players 60
  *
  * Options:
- *   --url        API origin. Default http://localhost:3000
+ *   --url        API origin, used for REST and the socket. Default
+ *                http://localhost:3000. In production: the Cloud Run URL
+ *                (Firebase Hosting does not forward WebSocket).
  *   --players    Students in the room (1–60). Default 60.
  *   --questions  Questions to play before ending. Default 3.
  *   --teacher    username:password of an approved teacher. Default teacher:teacher123
