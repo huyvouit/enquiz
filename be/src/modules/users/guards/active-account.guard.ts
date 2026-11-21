@@ -31,10 +31,16 @@ export class ActiveAccountGuard implements CanActivate {
       AuthUser | undefined;
     if (!user) return true; // @Public() endpoint
 
-    const status = await this.statuses.get(user.userId);
-    if (status === null || status === AccountStatus.DISABLED) {
+    const state = await this.statuses.getState(user.userId);
+    const status = state?.status ?? null;
+    if (state === null || status === AccountStatus.DISABLED) {
       throw new UnauthorizedException(
         'Tài khoản đã bị khoá hoặc không còn tồn tại',
+      );
+    }
+    if (!AccountStatusService.tokenStillValid(state, user.issuedAt)) {
+      throw new UnauthorizedException(
+        'Mật khẩu vừa được đổi. Vui lòng đăng nhập lại',
       );
     }
     if (status === AccountStatus.PENDING) {

@@ -5,8 +5,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
+import { ChangePasswordHandler } from './commands/handlers/change-password.handler.js';
 import { LoginHandler } from './commands/handlers/login.handler.js';
 import { RegisterHandler } from './commands/handlers/register.handler.js';
+import { PasswordController } from './password.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { TokenService } from './token.service.js';
 
@@ -26,7 +28,13 @@ import { TokenService } from './token.service.js';
       }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [TokenService, JwtStrategy, RegisterHandler, LoginHandler],
+  controllers: [AuthController, PasswordController],
+  providers: [
+    TokenService,
+    JwtStrategy,
+    RegisterHandler,
+    LoginHandler,
+    ChangePasswordHandler,
+  ],
 })
 export class AuthModule {}

@@ -52,6 +52,13 @@ export class User {
   @Prop({ type: StudentProfileSchema })
   studentProfile?: StudentProfile;
 
+  /**
+   * Last password change or reset, in whole seconds (plan D20). Tokens
+   * issued before it are refused, so other devices are logged out.
+   */
+  @Prop({ type: Date, default: null })
+  passwordChangedAt?: Date | null;
+
   createdAt: Date;
   updatedAt: Date;
 }
