@@ -47,6 +47,7 @@ Kế hoạch: `phase-6-plan.md` (viết trước khi bắt đầu giai đoạn).
 - [ ] **6.2 OAuth Google cho giáo viên** (Google Workspace for Education nếu trường dùng); gộp tài khoản chỉ khi email đã xác minh. Không làm Facebook: học sinh 6–11 tuổi, Facebook yêu cầu từ 13 tuổi
 - [ ] **6.3 PWA:** `vite-plugin-pwa`, manifest `standalone` cho tablet/mobile, cache tài nguyên & ảnh từ Cloud Storage
 - [ ] **6.4 Cập nhật phiên bản:** báo bản mới qua service worker (`registerType: 'prompt'`); thêm cờ `forceUpdate` khi cần ép cập nhật bắt buộc
+- [ ] **6.5 Quản lý phiên bản deploy:** mỗi lần phát hành có số phiên bản (ví dụ `v1.2.0`) gắn với git tag và tag image Cloud Run; hiện phiên bản ở `/health` và chân trang; ghi CHANGELOG; deploy chỉ khi chủ dự án xác nhận; rollback theo số phiên bản (Cloud Run revision và Firebase release tương ứng)
 
 ## 🗂️ Backlog / Ý tưởng
 - Đặt lại mật khẩu qua email

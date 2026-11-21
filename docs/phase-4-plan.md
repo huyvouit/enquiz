@@ -375,7 +375,7 @@ Dữ liệu thử tạo ra khi kiểm tra (lớp, 182 tài khoản thử, bài l
 
 ### Kết quả vận hành (phần C của launch-checklist) và đóng 4.0
 
-> Ngày: 2026-11-21 · Nhánh `feat/4.0-ops` (chưa commit) · Trạng thái: **4.0 đóng**
+> Ngày: 2026-11-21 · [PR #10](https://github.com/huyvouit/enquiz/pull/10) đã merge vào `main` (merge commit `d190dbd`, CI xanh cả 3 job) · Trạng thái: **4.0 đóng** · Deploy `CloudLogger` và link có gạch chân: **chờ chủ dự án xác nhận** (từ nay mọi lần deploy đều hỏi trước; quản lý phiên bản deploy ở 6.5)
 
 | Mục | Kết quả |
 | --- | --- |
