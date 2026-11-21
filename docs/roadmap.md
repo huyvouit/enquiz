@@ -42,7 +42,7 @@ Kế hoạch, quyết định D19 và L1–L12 (đã chốt), kết quả từng
 - [ ] **5.3 Khách vãng lai:** Guest nickname (lọc từ ngữ không phù hợp), rate limit riêng cho khách. **Code xong**
 
 ## 📱 Giai đoạn 6 – Bảo mật Auth, PWA & Quản lý phiên bản
-Kế hoạch: `phase-6-plan.md` (viết trước khi bắt đầu giai đoạn).
+Kế hoạch: [phase-6-plan.md](phase-6-plan.md) (lập và chốt D21–D25 ngày 2026-11-21). Thứ tự: 6.5 → 6.1 → 6.3 → 6.4 → 6.2.
 - [ ] **6.1 Token:** `access_token` trên RAM + `refresh_token` qua HttpOnly Cookie (`SameSite=Strict`, `Path=/api/v1/auth`). Chung domain nhờ rewrite của Firebase Hosting (4.0). **Lưu ý:** Firebase Hosting chỉ chuyển tiếp cookie tên `__session` sang Cloud Run, nên cookie refresh phải đặt tên `__session`
 - [ ] **6.2 OAuth Google cho giáo viên** (Google Workspace for Education nếu trường dùng); gộp tài khoản chỉ khi email đã xác minh. Không làm Facebook: học sinh 6–11 tuổi, Facebook yêu cầu từ 13 tuổi
 - [ ] **6.3 PWA:** `vite-plugin-pwa`, manifest `standalone` cho tablet/mobile, cache tài nguyên & ảnh từ Cloud Storage
