@@ -4,6 +4,7 @@ import { homePathFor, useAuthStore } from '@/features/auth'
 import type { Role } from '@/shared/api/types'
 import { cn } from '@/shared/lib/cn'
 import { SoundControls } from '@/shared/sound'
+import { VersionTag } from '@/shared/version'
 
 const NAV: Record<Role, { to: string; label: string }[]> = {
   student: [
@@ -95,6 +96,9 @@ export function AppLayout() {
       <main className="mx-auto max-w-6xl px-4 py-8">
         <Outlet />
       </main>
+      <footer className="pb-6">
+        <VersionTag />
+      </footer>
     </div>
   )
 }

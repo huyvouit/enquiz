@@ -37,7 +37,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 
 # Only used with STORAGE_DRIVER=local (local testing). Cloud Run's filesystem
-# is in-memory and wiped on every restart: production must use STORAGE_DRIVER=s3.
+# is in-memory and wiped on every restart: production uses STORAGE_DRIVER=gcs.
 RUN mkdir -p uploads && chown node:node uploads
 USER node
 
