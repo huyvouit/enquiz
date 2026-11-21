@@ -4,12 +4,16 @@ import { errorMessage } from '@/shared/api/http'
 import { Button, Card, ErrorBox, Field, Input, PageHeader } from '@/shared/components'
 import { homePathFor, useAuthStore } from '../store/auth.store'
 
-/** Same rules as the server (plan D20): admins need a longer password. */
+/**
+ * Plan D20: admins need a longer password. The server only receives a hash
+ * of the password (passwordHash), so the length rules live here.
+ */
 const minLength = (role: string) => (role === 'admin' ? 12 : 6)
 
 export function ChangePasswordPage() {
   const user = useAuthStore((s) => s.user)
   const changePassword = useAuthStore((s) => s.changePassword)
+  const logoutEverywhere = useAuthStore((s) => s.logoutEverywhere)
   const navigate = useNavigate()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -18,13 +22,17 @@ export function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [endingAll, setEndingAll] = useState(false)
+  const [endAllError, setEndAllError] = useState<string | null>(null)
   if (!user) return null
   const min = minLength(user.role)
+  const username = user.username
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     if (next.length < min) return setError(`Mật khẩu mới cần ít nhất ${min} ký tự`)
+    if (next.trim().toLowerCase() === username) return setError('Mật khẩu mới không được trùng tên đăng nhập')
     if (next !== confirm) return setError('Hai lần nhập mật khẩu mới chưa giống nhau')
     if (next === current) return setError('Mật khẩu mới phải khác mật khẩu hiện tại')
     setLoading(true)
@@ -38,6 +46,19 @@ export function ChangePasswordPage() {
       setError(errorMessage(err))
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function endAllSessions() {
+    if (!window.confirm('Đăng xuất tài khoản này trên mọi máy, kể cả máy này?')) return
+    setEndAllError(null)
+    setEndingAll(true)
+    try {
+      await logoutEverywhere()
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setEndAllError(errorMessage(err))
+      setEndingAll(false)
     }
   }
 
@@ -100,6 +121,20 @@ export function ChangePasswordPage() {
             </Button>
           </form>
         )}
+      </Card>
+      <Card className="mt-6">
+        <h2 className="font-display text-lg font-bold">💻 Đăng xuất mọi thiết bị</h2>
+        <p className="mt-1 text-ink-soft">
+          Quên đăng xuất ở máy của trường hay máy người khác? Bấm để thoát tài khoản trên tất cả các máy, kể cả máy này.
+        </p>
+        {endAllError ? (
+          <div className="mt-3">
+            <ErrorBox message={endAllError} />
+          </div>
+        ) : null}
+        <Button variant="secondary" className="mt-4" onClick={endAllSessions} loading={endingAll}>
+          Đăng xuất mọi thiết bị
+        </Button>
       </Card>
     </div>
   )

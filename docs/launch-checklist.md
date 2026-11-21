@@ -49,10 +49,10 @@ Repo là **public**: tài liệu này và mọi commit không chứa ID project,
 **3. Injection, XSS, CSRF, open redirect — Đạt**
 - NoSQL injection: mọi giá trị vào bộ lọc Mongo đều qua DTO (`IsString`, `IsMongoId`, `IsEnum`) hoặc `Types.ObjectId`; không có `$where`. Regex từ ô tìm kiếm đều qua `escapeRegex` (không ReDoS).
 - XSS: frontend không dùng `dangerouslySetInnerHTML`, `innerHTML` hay `eval`; React tự escape. PDF/Excel xuất ra không chạy script.
-- CSRF: API dùng `Authorization: Bearer`, không dùng cookie, nên trang khác không gửi request thay người dùng được.
+- CSRF: API dùng `Authorization: Bearer`, không dùng cookie, nên trang khác không gửi request thay người dùng được. *(Từ 6.1: chỉ `/auth/refresh` và `/auth/logout` đọc cookie `__session`, có `SameSite=Strict` và kiểm tra `Origin`.)*
 - Open redirect: sau đăng nhập chỉ chuyển trong app (`location.state.from`, không đọc từ URL).
 - Package: không có script cài đặt lạ; xem mục 19.
-- Ghi chú: token lưu ở `localStorage`. An toàn khi không có XSS; header CSP ở A6 thêm một lớp chặn.
+- Ghi chú: token lưu ở `localStorage`. An toàn khi không có XSS; header CSP ở A6 thêm một lớp chặn. *(Đã thay ở 6.1: access token 15 phút trong RAM, refresh token trong cookie HttpOnly.)*
 
 **4. CORS và rate limit — Đạt một phần**
 - CORS: API chỉ nhận origin trong `CORS_ORIGIN`; socket chỉ nhận `LIVE_CORS_ORIGINS`.

@@ -13,14 +13,13 @@ import {
   QueryBus,
 } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
-import bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { AccountStatus } from '../../../../common/enums/account-status.enum.js';
 import { Role } from '../../../../common/enums/role.enum.js';
 import { SlidingWindowLimiter } from '../../../../common/rate-limit/sliding-window-limiter.js';
 import { escapeRegex } from '../../../../common/utils/regex.js';
 import {
-  BCRYPT_ROUNDS,
+  hashPlainForStorage,
   kidPassword,
 } from '../../../../common/utils/passwords.js';
 import {
@@ -172,7 +171,7 @@ export class BulkCreateStudentsHandler implements ICommandHandler<BulkCreateStud
         accounts.map(async (a) => ({
           username: a.username,
           fullName: a.fullName,
-          password: await bcrypt.hash(a.password, BCRYPT_ROUNDS),
+          password: await hashPlainForStorage(a.username, a.password),
           role: Role.STUDENT,
           status: AccountStatus.ACTIVE,
           studentProfile: { gradeLevel: c.gradeLevel },

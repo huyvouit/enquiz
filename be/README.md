@@ -16,6 +16,7 @@ Quy tắc chung, cách chạy và danh sách tính năng: xem [README gốc](../
 | `npm run migrate:phase2` | Chuyển dữ liệu giai đoạn 1 → 2 (chạy một lần, an toàn khi chạy lại) |
 | `npm run migrate:phase3` | Chuyển dữ liệu lên giai đoạn 3; `-- --dry-run` để xem trước |
 | `npm run seed:content` | Nạp kho câu hỏi chuẩn `src/database/seed/content/*.csv` + trạm bản đồ (chạy lại an toàn) |
+| `npm run set:password -- <username>` | Đặt mật khẩu mới cho một tài khoản bất kỳ, kể cả admin, và kết thúc mọi phiên của nó. Mật khẩu lấy từ `NEW_PASSWORD` (admin ≥ 12, khác ≥ 6 ký tự) hoặc sinh ngẫu nhiên và in **một lần**. Dùng cho tài khoản tạo trước v1.1.0 (D26) |
 | `npm run create:admin -- <username> "<Họ tên>"` | Tạo tài khoản admin đầu tiên (production không có dữ liệu demo). Mật khẩu lấy từ `ADMIN_PASSWORD` (≥ 12 ký tự) hoặc sinh ngẫu nhiên và in **một lần** |
 
 ## Biến môi trường (`.env`)
@@ -25,7 +26,11 @@ Quy tắc chung, cách chạy và danh sách tính năng: xem [README gốc](../
 | `PORT` | `3000` | Cổng HTTP |
 | `MONGODB_URI` | — (bắt buộc) | Chuỗi kết nối MongoDB, hoặc `memory` để dùng DB tạm |
 | `JWT_SECRET` | — (bắt buộc, ≥ 16 ký tự) | Khoá ký JWT |
-| `JWT_EXPIRES_IN` | `7d` | Hạn token |
+| `JWT_EXPIRES_IN` | `15m` | Hạn access token (D22); app tự lấy token mới từ cookie phiên |
+| `REFRESH_TTL_SESSION` | `12h` | Phiên khi **không** chọn "Ghi nhớ đăng nhập": cookie mất khi đóng trình duyệt, tối đa 12 giờ |
+| `REFRESH_TTL_REMEMBER` | `7d` | Phiên khi chọn "Ghi nhớ": hết hạn sau 7 ngày không dùng… |
+| `REFRESH_MAX_REMEMBER` | `14d` | …và không quá 14 ngày kể từ lúc đăng nhập |
+| `COOKIE_SECURE` | `true` | Thuộc tính `Secure` của cookie `__session` (trình duyệt vẫn nhận trên `http://localhost`) |
 | `CORS_ORIGIN` | `http://localhost:5173` | Danh sách origin, cách nhau bởi dấu phẩy |
 | `LIVE_CORS_ORIGINS` | `http://localhost:5173` | Origin được mở socket Đấu trường (`/live`) thẳng tới Cloud Run, cách nhau bởi dấu phẩy. Production: domain Firebase Hosting (D19) |
 | `SEED_DEMO_DATA` | `false` | `true` → tạo dữ liệu demo khi DB chưa có user |

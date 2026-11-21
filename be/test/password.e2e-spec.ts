@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { io } from 'socket.io-client';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
+import { pw, usernameOf } from './auth-helpers.js';
 
 // Must be set before AppModule is imported (ConfigModule validates on import).
 process.env.MONGODB_URI = 'memory';
@@ -29,7 +30,9 @@ describe('EnQuiz API — change password (e2e)', () => {
   let base: string;
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
   const login = (username: string, password: string) =>
-    http.post(`${API}/auth/login`).send({ username, password });
+    http
+      .post(`${API}/auth/login`)
+      .send({ username, password: pw(username, password) });
   const token = async (username: string, password: string) =>
     (await login(username, password).expect(200)).body.data
       .accessToken as string;
@@ -37,7 +40,10 @@ describe('EnQuiz API — change password (e2e)', () => {
     http
       .post(`${API}/auth/change-password`)
       .set(auth(t))
-      .send({ currentPassword, newPassword });
+      .send({
+        currentPassword: pw(usernameOf(t), currentPassword),
+        newPassword: pw(usernameOf(t), newPassword),
+      });
   const profile = (t: string) => http.get(`${API}/users/profile`).set(auth(t));
 
   beforeAll(async () => {
@@ -94,21 +100,28 @@ describe('EnQuiz API — change password (e2e)', () => {
       await profile(fresh).expect(200);
     });
 
-    it('refuses the same password, the username or a short one', async () => {
+    it('refuses the same password or the username', async () => {
       const same = await change(fresh, 'co-lan-2026', 'co-lan-2026').expect(
         400,
       );
       expect(same.body.message).toMatch(/khác mật khẩu hiện tại/);
-      const name = await change(fresh, 'co-lan-2026', 'Teacher').expect(400);
+      const name = await change(fresh, 'co-lan-2026', 'teacher').expect(400);
       expect(name.body.message).toMatch(/trùng tên đăng nhập/);
-      await change(fresh, 'co-lan-2026', '12345').expect(400);
+      // Length rules are the browser's job: the server only sees a hash.
     });
 
-    it('an admin needs at least 12 characters', async () => {
-      const admin = await token('admin', 'admin123');
-      const res = await change(admin, 'admin123', 'short-pw1').expect(400);
-      expect(res.body.message).toMatch(/ít nhất 12/);
-      await change(admin, 'admin123', 'a-much-longer-one').expect(200);
+    it('refuses a password sent in clear text (an outdated app)', async () => {
+      const res = await http
+        .post(`${API}/auth/change-password`)
+        .set(auth(fresh))
+        .send({ currentPassword: 'co-lan-2026', newPassword: 'whatever-new' })
+        .expect(400);
+      expect(JSON.stringify(res.body)).toMatch(/Ứng dụng đã cũ/);
+      await http
+        .post(`${API}/auth/login`)
+        .send({ username: 'teacher', password: 'co-lan-2026' })
+        .expect(400);
+      await login('teacher', 'co-lan-2026').expect(200);
     });
 
     it('a live quiz socket refuses a token from before the change', async () => {

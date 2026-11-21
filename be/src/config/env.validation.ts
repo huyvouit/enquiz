@@ -1,3 +1,5 @@
+import { parseDuration } from '../common/utils/duration.js';
+
 /**
  * Environment variables are validated once at startup so the app fails fast
  * with a clear message instead of failing later at runtime.
@@ -7,7 +9,21 @@ export interface AppEnv {
   /** A MongoDB connection string, or the literal `memory` for an in-memory dev DB. */
   MONGODB_URI: string;
   JWT_SECRET: string;
+  /** Access token lifetime (plan D22): short, refreshed from the session cookie. */
   JWT_EXPIRES_IN: string;
+  /**
+   * Refresh sessions (plan D22). Without "remember me": a browser-session
+   * cookie, at most REFRESH_TTL_SESSION. With it: REFRESH_TTL_REMEMBER since
+   * the last use, never more than REFRESH_MAX_REMEMBER after the login.
+   */
+  REFRESH_TTL_SESSION: string;
+  REFRESH_TTL_REMEMBER: string;
+  REFRESH_MAX_REMEMBER: string;
+  /**
+   * `Secure` attribute of the session cookie. Browsers accept Secure cookies
+   * on http://localhost, so only turn it off for a plain-http test host.
+   */
+  COOKIE_SECURE: boolean;
   CORS_ORIGIN: string;
   /**
    * Origins allowed to open the live quiz socket (plan 5, D19), comma
@@ -37,6 +53,12 @@ export interface AppEnv {
    */
   APP_VERSION: string;
   GIT_COMMIT: string;
+  /**
+   * Oldest frontend release the API still works with (plan D25). Older open
+   * apps update themselves (after an exam or match). Raise it only for an
+   * API change that breaks older frontends.
+   */
+  MIN_CLIENT_VERSION: string;
   /**
    * Where question images and listening audio go: `local` disk, an
    * S3-compatible bucket (`s3`, needs keys) or Cloud Storage signed in as the
@@ -80,7 +102,11 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     PORT: Number(str('PORT', '3000')),
     MONGODB_URI: str('MONGODB_URI'),
     JWT_SECRET: str('JWT_SECRET'),
-    JWT_EXPIRES_IN: str('JWT_EXPIRES_IN', '7d'),
+    JWT_EXPIRES_IN: str('JWT_EXPIRES_IN', '15m'),
+    REFRESH_TTL_SESSION: str('REFRESH_TTL_SESSION', '12h'),
+    REFRESH_TTL_REMEMBER: str('REFRESH_TTL_REMEMBER', '7d'),
+    REFRESH_MAX_REMEMBER: str('REFRESH_MAX_REMEMBER', '14d'),
+    COOKIE_SECURE: str('COOKIE_SECURE', 'true') !== 'false',
     CORS_ORIGIN: str('CORS_ORIGIN', 'http://localhost:5173'),
     LIVE_CORS_ORIGINS: str('LIVE_CORS_ORIGINS', 'http://localhost:5173'),
     SEED_DEMO_DATA: str('SEED_DEMO_DATA', 'false') === 'true',
@@ -90,6 +116,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     LIVE_TRUST_PROXY: Number(str('LIVE_TRUST_PROXY', str('TRUST_PROXY', '0'))),
     APP_VERSION: str('APP_VERSION', 'dev'),
     GIT_COMMIT: str('GIT_COMMIT', 'unknown'),
+    MIN_CLIENT_VERSION: str('MIN_CLIENT_VERSION', '0.0.0'),
     STORAGE_DRIVER: str('STORAGE_DRIVER', 'local') as AppEnv['STORAGE_DRIVER'],
     UPLOAD_DIR: str('UPLOAD_DIR', 'uploads'),
     S3_BUCKET: str('S3_BUCKET', ''),
@@ -104,6 +131,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   };
 
   if (Number.isNaN(env.PORT)) errors.push('PORT must be a number');
+  if (!/^\d+\.\d+\.\d+$/.test(env.MIN_CLIENT_VERSION)) {
+    errors.push('MIN_CLIENT_VERSION must look like 1.2.0');
+  }
   if (!['local', 's3', 'gcs'].includes(env.STORAGE_DRIVER)) {
     errors.push('STORAGE_DRIVER must be local, s3 or gcs');
   }
@@ -134,6 +164,24 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   }
   if (!Number.isInteger(env.TRUST_PROXY) || env.TRUST_PROXY < 0) {
     errors.push('TRUST_PROXY must be 0 or a positive integer');
+  }
+  for (const key of [
+    'JWT_EXPIRES_IN',
+    'REFRESH_TTL_SESSION',
+    'REFRESH_TTL_REMEMBER',
+    'REFRESH_MAX_REMEMBER',
+  ] as const) {
+    if (!(parseDuration(env[key]) > 0)) {
+      errors.push(`${key} must look like 15m, 12h or 7d`);
+    }
+  }
+  if (
+    parseDuration(env.REFRESH_MAX_REMEMBER) <
+    parseDuration(env.REFRESH_TTL_REMEMBER)
+  ) {
+    errors.push(
+      'REFRESH_MAX_REMEMBER must not be shorter than REFRESH_TTL_REMEMBER',
+    );
   }
   if (env.JWT_SECRET && env.JWT_SECRET.length < 16) {
     errors.push('JWT_SECRET must be at least 16 characters');

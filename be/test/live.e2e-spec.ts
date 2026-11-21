@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { io, type Socket } from 'socket.io-client';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
+import { pw } from './auth-helpers.js';
 
 // Must be set before AppModule is imported (ConfigModule validates on import).
 process.env.MONGODB_URI = 'memory';
@@ -31,7 +32,7 @@ describe('EnQuiz API — phase 5.0: live socket foundation (e2e)', () => {
     (
       await http
         .post(`${API}/auth/login`)
-        .send({ username, password })
+        .send({ username, password: pw(username, password) })
         .expect(200)
     ).body.data.accessToken as string;
 
@@ -107,7 +108,7 @@ describe('EnQuiz API — phase 5.0: live socket foundation (e2e)', () => {
       .post(`${API}/auth/register`)
       .send({
         username: 'cohoa',
-        password: 'secret123',
+        password: pw('cohoa', 'secret123'),
         fullName: 'Cô Hoà',
         role: 'teacher',
       })
@@ -120,7 +121,7 @@ describe('EnQuiz API — phase 5.0: live socket foundation (e2e)', () => {
       .post(`${API}/auth/register`)
       .send({
         username: 'beti01',
-        password: 'secret123',
+        password: pw('beti01', 'secret123'),
         fullName: 'Bé Tí',
         role: 'student',
         gradeLevel: 1,

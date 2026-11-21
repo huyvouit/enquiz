@@ -1,14 +1,13 @@
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
+import { CLIENT_HASH, OUTDATED_APP } from '../../../common/utils/passwords.js';
 
+/** Both are client hashes; length rules are checked in the browser (D20). */
 export class ChangePasswordDto {
   @IsString()
-  @MinLength(1)
-  @MaxLength(72)
+  @Matches(CLIENT_HASH, { message: OUTDATED_APP })
   currentPassword: string;
 
-  /** Minimum length depends on the role: checked in the handler (D20). */
   @IsString()
-  @MinLength(6, { message: 'Mật khẩu mới cần ít nhất 6 ký tự' })
-  @MaxLength(72) // bcrypt only uses the first 72 bytes
+  @Matches(CLIENT_HASH, { message: OUTDATED_APP })
   newPassword: string;
 }

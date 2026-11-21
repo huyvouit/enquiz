@@ -6,8 +6,9 @@ import { forgetChunkReload } from './chunk-reload'
 export function bootstrap() {
   configureHttp({
     getToken: () => useAuthStore.getState().token,
-    // Expired/invalid token: drop the session; route guards send the user to /login.
-    onUnauthorized: () => useAuthStore.getState().logout(),
+    renewToken: () => useAuthStore.getState().renew(),
+    // Session over or revoked: forget it; route guards send the user to /login.
+    onUnauthorized: () => useAuthStore.getState().clear(),
   })
   forgetChunkReload()
 }

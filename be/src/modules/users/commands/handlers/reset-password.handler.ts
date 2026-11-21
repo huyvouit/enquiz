@@ -1,11 +1,10 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler, QueryBus } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
-import bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
 import { Role } from '../../../../common/enums/role.enum.js';
 import {
-  BCRYPT_ROUNDS,
+  hashPlainForStorage,
   kidPassword,
 } from '../../../../common/utils/passwords.js';
 import { TeachesStudentQuery } from '../../../classes/queries/impl/class-membership.queries.js';
@@ -13,6 +12,7 @@ import {
   AccountStatusService,
   passwordChangeStamp,
 } from '../../account-status.service.js';
+import { AuthSessionService } from '../../sessions/auth-session.service.js';
 import { User } from '../../schemas/user.schema.js';
 import {
   ResetPasswordCommand,
@@ -25,6 +25,7 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly queryBus: QueryBus,
     private readonly statuses: AccountStatusService,
+    private readonly sessions: AuthSessionService,
   ) {}
 
   async execute({
@@ -55,11 +56,12 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
     await this.userModel.updateOne(
       { _id: target._id },
       {
-        password: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS),
+        password: await hashPlainForStorage(target.username, temporaryPassword),
         passwordChangedAt: passwordChangeStamp(),
       },
     );
     this.statuses.invalidate(target._id.toString());
+    await this.sessions.revokeAll(target._id.toString());
     return {
       userId: target._id.toString(),
       username: target.username,

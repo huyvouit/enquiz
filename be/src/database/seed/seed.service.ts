@@ -1,9 +1,8 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
-import { BCRYPT_ROUNDS } from '../../common/utils/passwords.js';
+import { hashPlainForStorage } from '../../common/utils/passwords.js';
 import { Question } from '../../modules/questions/schemas/question.schema.js';
 import { Quiz, QuizStatus } from '../../modules/quizzes/schemas/quiz.schema.js';
 import { User } from '../../modules/users/schemas/user.schema.js';
@@ -34,7 +33,7 @@ export class SeedService implements OnApplicationBootstrap {
     for (const u of DEMO_USERS) {
       await this.userModel.create({
         username: u.username,
-        password: await bcrypt.hash(u.password, BCRYPT_ROUNDS),
+        password: await hashPlainForStorage(u.username, u.password),
         fullName: u.fullName,
         role: u.role,
         studentProfile:

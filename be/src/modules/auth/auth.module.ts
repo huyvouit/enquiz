@@ -9,6 +9,8 @@ import { ChangePasswordHandler } from './commands/handlers/change-password.handl
 import { LoginHandler } from './commands/handlers/login.handler.js';
 import { RegisterHandler } from './commands/handlers/register.handler.js';
 import { PasswordController } from './password.controller.js';
+import { SessionCookie } from './session-cookie.js';
+import { SessionController } from './session.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { TokenService } from './token.service.js';
 
@@ -22,15 +24,16 @@ import { TokenService } from './token.service.js';
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          // e.g. "7d", "12h" — validated in env.validation.ts
+          // "15m" by default (plan D22) — validated in env.validation.ts
           expiresIn: config.getOrThrow<string>('JWT_EXPIRES_IN') as never,
         },
       }),
     }),
   ],
-  controllers: [AuthController, PasswordController],
+  controllers: [AuthController, PasswordController, SessionController],
   providers: [
     TokenService,
+    SessionCookie,
     JwtStrategy,
     RegisterHandler,
     LoginHandler,

@@ -6,6 +6,7 @@ import { Types } from 'mongoose';
 import { tmpdir } from 'node:os';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
+import { pw } from './auth-helpers.js';
 import ExcelJS from 'exceljs';
 
 // Must be set before AppModule is imported (ConfigModule validates on import).
@@ -36,7 +37,7 @@ describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
     (
       await http
         .post(`${API}/auth/login`)
-        .send({ username, password })
+        .send({ username, password: pw(username, password) })
         .expect(200)
     ).body.data.accessToken as string;
 
@@ -71,7 +72,7 @@ describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
       .post(`${API}/auth/register`)
       .send({
         username: 'cothu',
-        password: 'secret123',
+        password: pw('cothu', 'secret123'),
         fullName: 'Cô Thu',
         role: 'teacher',
       })
@@ -458,7 +459,7 @@ describe('EnQuiz API — phase 3: classes & homework (e2e)', () => {
         .post(`${API}/auth/register`)
         .send({
           username: 'be_moi',
-          password: 'secret123',
+          password: pw('be_moi', 'secret123'),
           fullName: 'Bé Mới',
           role: 'student',
           gradeLevel: 1,

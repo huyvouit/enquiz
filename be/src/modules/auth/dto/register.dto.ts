@@ -10,6 +10,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Role } from '../../../common/enums/role.enum.js';
+import { CLIENT_HASH, OUTDATED_APP } from '../../../common/utils/passwords.js';
 
 /** Admin accounts cannot self-register; they are created by seed/ops. */
 export const REGISTERABLE_ROLES = [Role.STUDENT, Role.TEACHER] as const;
@@ -23,9 +24,9 @@ export class RegisterDto {
   })
   username: string;
 
+  /** Client hash; the 6-character minimum is checked in the browser. */
   @IsString()
-  @MinLength(6)
-  @MaxLength(72) // bcrypt only uses the first 72 bytes
+  @Matches(CLIENT_HASH, { message: OUTDATED_APP })
   password: string;
 
   @IsString()

@@ -61,8 +61,7 @@ export function PendingApprovalPage() {
           <Button
             variant="secondary"
             onClick={() => {
-              logout()
-              navigate('/login', { replace: true })
+              void logout().then(() => navigate('/login', { replace: true }))
             }}
           >
             Đăng xuất

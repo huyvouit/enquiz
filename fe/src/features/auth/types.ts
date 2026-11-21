@@ -29,6 +29,8 @@ export interface AuthResult {
 export interface LoginPayload {
   username: string
   password: string
+  /** "Ghi nhớ đăng nhập trên máy này": 7 days instead of 12 hours (D22). */
+  remember?: boolean
 }
 
 export interface RegisterPayload {
