@@ -17,7 +17,7 @@ export class AudioStorageService {
   ) {}
 
   get isLocal(): boolean {
-    return this.config.get('STORAGE_DRIVER') !== 's3';
+    return this.config.get('STORAGE_DRIVER') === 'local';
   }
 
   publicUrl(key: string): string {
