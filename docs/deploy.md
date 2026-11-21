@@ -145,6 +145,8 @@ firebase target:apply hosting app $SITE     # gắn target "app" với site (m�
 # VITE_API_BASE_URL giữ mặc định /api/v1 (đi qua rewrite của Firebase).
 # Socket Đấu trường đi thẳng tới Cloud Run (D19):
 export VITE_LIVE_URL=$(gcloud run services describe enquiz-api --region=$REGION --format='value(status.url)')
+# Địa chỉ site cho link chia sẻ (Open Graph) và sitemap.xml
+export VITE_SITE_URL=https://$SITE.web.app
 npm ci && npm run build
 firebase deploy --only hosting
 cd ..
@@ -180,6 +182,13 @@ cd ..
    - Trình duyệt báo lỗi CORS khi mở socket: kiểm tra `LIVE_CORS_ORIGINS` có đúng domain đang mở trang không.
    - Thử tải một phòng 60 học sinh (tạo lớp và tài khoản thử, **chỉ chạy vào DB thử**, không vào dữ liệu thật): `node scripts/live-load.mjs --url $RUN_URL --players 60 --teacher <giáo viên thử>:<mật khẩu>`.
    - Xong thì tắt Đấu trường (mục 4) nếu chưa dùng thật.
+9. **Header bảo mật và SEO** ([launch-checklist.md](launch-checklist.md) A6, B3):
+   ```bash
+   curl -sI https://$SITE.web.app/login | grep -iE 'content-security-policy|x-frame-options|strict-transport'
+   curl -s https://$SITE.web.app/robots.txt
+   curl -s https://$SITE.web.app/sitemap.xml
+   ```
+   Mở site bằng Chrome, F12 → Console: không có dòng `Refused to … Content Security Policy`. Dán link site vào Zalo hoặc Messenger: thấy ảnh và mô tả EnQuiz.
 
 ## Cập nhật và rollback
 
