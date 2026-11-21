@@ -288,7 +288,7 @@ index { hostId, endedAt } · { classId, endedAt } · TTL theo endedAt (180 ngày
 
 ### Kết quả 5.0
 
-> Ngày: 2026-11-21 · Nhánh `feat/5.0-live-foundation` (chưa commit, chung với 5.1–5.3) · Trạng thái: **code xong**, chờ thử trên Cloud Run thật
+> Ngày: 2026-11-21 · [PR #4](https://github.com/huyvouit/enquiz/pull/4) đã merge vào `main` (merge commit `2a53dcf`), chung với 5.1–5.3 · Trạng thái: **code xong**, chờ thử trên Cloud Run thật
 
 **Đã làm**
 
@@ -324,7 +324,7 @@ index { hostId, endedAt } · { classId, endedAt } · TTL theo endedAt (180 ngày
 
 ### Kết quả 5.1–5.3
 
-> Ngày: 2026-11-21 · Cùng nhánh `feat/5.0-live-foundation` (chưa commit) · Trạng thái: **code xong**, chờ thử trên Cloud Run thật · Chi tiết: [tài liệu 15](features/15-live-quiz.md)
+> Ngày: 2026-11-21 · [PR #4](https://github.com/huyvouit/enquiz/pull/4) đã merge vào `main` (merge commit `2a53dcf`) · Trạng thái: **code xong**, chờ thử trên Cloud Run thật · Chi tiết: [tài liệu 15](features/15-live-quiz.md)
 
 **Đã làm**
 
@@ -352,6 +352,7 @@ index { hostId, endedAt } · { classId, endedAt } · TTL theo endedAt (180 ngày
   - câu hỏi tới đủ 60 máy ~5 ms sau khi giáo viên bấm, các máy lệch nhau 3–16 ms;
   - phản hồi khi trả lời median 3 ms;
   - 60/60 máy tới bục vinh quang.
+- **CI trên PR #4:** xanh cả 3 job (backend, frontend, docker).
 - **Chưa kiểm tra:** Cloud Run thật (chung với 5.0). Độ trễ thật qua Wi-Fi trường sẽ lớn hơn số cục bộ.
 
 **Phát hiện và đã sửa trong lúc làm**
