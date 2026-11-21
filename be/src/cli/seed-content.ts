@@ -6,6 +6,8 @@
  * Idempotent: rows are matched by `externalId` (re-runs update them) and
  * stations by (grade, title). A file with any invalid row is not imported.
  */
+// Must stay the first import: turns the demo seed off (see cli-env.ts).
+import './cli-env.js';
 import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
 import type { Model, Types } from 'mongoose';

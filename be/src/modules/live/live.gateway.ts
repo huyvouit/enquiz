@@ -133,7 +133,7 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
   ) {}
 
   afterInit(): void {
-    const hops = this.config.getOrThrow<number>('TRUST_PROXY');
+    const hops = this.config.getOrThrow<number>('LIVE_TRUST_PROXY');
     this.server.use((socket: LiveSocket, next) => {
       this.auth
         .authenticate(socket.handshake.auth?.token)

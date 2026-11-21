@@ -26,6 +26,12 @@ export interface AppEnv {
    */
   TRUST_PROXY: number;
   /**
+   * Same, for the live quiz socket, which reaches Cloud Run directly (D19)
+   * while HTTP goes through Firebase Hosting: one proxy fewer. Trusting too
+   * many lets a client fake its IP with X-Forwarded-For. Default: TRUST_PROXY.
+   */
+  LIVE_TRUST_PROXY: number;
+  /**
    * Where question images and listening audio go: `local` disk, an
    * S3-compatible bucket (`s3`, needs keys) or Cloud Storage signed in as the
    * service account the app runs as (`gcs`, no keys; plan D18).
@@ -75,6 +81,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     AUTH_RATE_LIMIT: Number(str('AUTH_RATE_LIMIT', '10')),
     AUTH_IP_RATE_LIMIT: Number(str('AUTH_IP_RATE_LIMIT', '100')),
     TRUST_PROXY: Number(str('TRUST_PROXY', '0')),
+    LIVE_TRUST_PROXY: Number(str('LIVE_TRUST_PROXY', str('TRUST_PROXY', '0'))),
     STORAGE_DRIVER: str('STORAGE_DRIVER', 'local') as AppEnv['STORAGE_DRIVER'],
     UPLOAD_DIR: str('UPLOAD_DIR', 'uploads'),
     S3_BUCKET: str('S3_BUCKET', ''),
@@ -113,6 +120,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     if (!Number.isInteger(env[key]) || env[key] < 1) {
       errors.push(`${key} must be a positive integer`);
     }
+  }
+  if (!Number.isInteger(env.LIVE_TRUST_PROXY) || env.LIVE_TRUST_PROXY < 0) {
+    errors.push('LIVE_TRUST_PROXY must be 0 or a positive integer');
   }
   if (!Number.isInteger(env.TRUST_PROXY) || env.TRUST_PROXY < 0) {
     errors.push('TRUST_PROXY must be 0 or a positive integer');

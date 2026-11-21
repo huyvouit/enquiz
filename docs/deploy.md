@@ -34,6 +34,10 @@ gcloud services enable run.googleapis.com artifactregistry.googleapis.com \
   apikeys.googleapis.com
 gcloud artifacts repositories create enquiz --repository-format=docker --location=$REGION
 gcloud iam service-accounts create enquiz-api --display-name="EnQuiz API (Cloud Run)"
+# Cloud Build chạy bằng tài khoản Compute mặc định; tổ chức mới không tự cấp quyền
+# cho nó, nên `gcloud builds submit` báo 403 nếu thiếu dòng này
+PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+gcloud projects add-iam-policy-binding $PROJECT_ID   --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com   --role=roles/cloudbuild.builds.builder
 
 firebase projects:addfirebase $PROJECT_ID     # gắn Firebase vào project (một lần)
 firebase hosting:sites:create $SITE --project $PROJECT_ID
@@ -46,21 +50,25 @@ API vừa bật có thể mất vài phút mới dùng được; lệnh tạo kh
 1. Tạo cluster riêng cho production (M0 miễn phí để thử), region Singapore nếu có.
 2. **Database Access:** tạo user riêng cho ứng dụng, mật khẩu dài và ngẫu nhiên (nút *Autogenerate*).
 3. **Network Access:** thêm `0.0.0.0/0`, vì Cloud Run không có IP ra cố định. Khi đó chỉ còn mật khẩu DB bảo vệ, nên mật khẩu phải dài và ngẫu nhiên.
-4. Lấy chuỗi kết nối và thêm tên DB, ví dụ `mongodb+srv://enquiz:<pass>@cluster0.xxxx.mongodb.net/enquiz?retryWrites=true&w=majority`.
+4. Lấy chuỗi kết nối và thêm tên DB, ví dụ `mongodb+srv://enquiz:<pass>@cluster0.xxxx.mongodb.net/enquiz?retryWrites=true&w=majority`. Chuỗi Atlas đưa ra không có tên DB (`.net/?retry…`); thiếu nó thì dữ liệu nằm trong DB tên `test`.
 5. Cất chuỗi này vào Secret Manager **mà không dán vào chat hay file**: Console → Security → Secret Manager → *Create secret*, tên `mongodb-uri`, dán chuỗi vào ô *Secret value*. Hoặc trong terminal của bạn:
    ```bash
    read -rs MONGO && printf '%s' "$MONGO" | gcloud secrets create mongodb-uri --data-file=- && unset MONGO
    ```
 6. **Backup:** M0 không có backup tự động. Hoặc nâng gói, hoặc chạy `mongodump` định kỳ.
 
-Nạp kho câu hỏi và tạo admin đầu tiên **từ máy local** (cả hai lệnh đều chạy lại an toàn). Máy local để `TTS_DRIVER` mặc định (`none`), nên câu nghe được nạp **chưa có âm thanh**; sau khi deploy, admin bấm "Tạo âm thanh" (bước 6 của mục kiểm tra).
+Nạp kho câu hỏi và tạo admin đầu tiên **từ máy local** (cả hai lệnh đều chạy lại an toàn). Hai lệnh này luôn tắt dữ liệu demo (`src/cli/cli-env.ts`), dù `be/.env` trên máy đặt `SEED_DEMO_DATA=true`: trước bản sửa, chạy vào DB trống sẽ tạo luôn tài khoản demo có mật khẩu công khai (`admin`/`admin123`) và quiz demo. Máy local để `TTS_DRIVER` mặc định (`none`), nên câu nghe được nạp **chưa có âm thanh**; sau khi deploy, admin bấm "Tạo âm thanh" (bước 6 của mục kiểm tra).
 
 ```bash
 cd be
 export MONGODB_URI=$(gcloud secrets versions access latest --secret=mongodb-uri)
 export JWT_SECRET=local-cli-only-0123456789      # CLI chỉ cần một giá trị hợp lệ
 npm run seed:content
-npm run create:admin -- admin "Quản trị viên"    # in mật khẩu MỘT lần, lưu lại ngay
+# Tự đặt mật khẩu (gõ ẩn, ≥ 12 ký tự); bỏ dòng này thì máy sinh ngẫu nhiên và in ra MỘT lần
+read -rsp "Mật khẩu admin: " ADMIN_PASSWORD && echo && export ADMIN_PASSWORD
+# Tránh username dễ đoán như "admin"
+npm run create:admin -- <username> "<Họ tên>"
+unset ADMIN_PASSWORD
 unset MONGODB_URI JWT_SECRET
 cd ..
 ```
@@ -111,7 +119,7 @@ gcloud run deploy enquiz-api --image=$REPO/api:$TAG --region=$REGION \
   --service-account=$RUN_SA --allow-unauthenticated \
   --min-instances=0 --max-instances=1 --memory=512Mi \
   --session-affinity --timeout=3600 \
-  --set-env-vars="^;^SEED_DEMO_DATA=false;TRUST_PROXY=1;CORS_ORIGIN=https://$SITE.web.app;LIVE_CORS_ORIGINS=https://$SITE.web.app,https://$SITE.firebaseapp.com;STORAGE_DRIVER=gcs;GCS_BUCKET=$BUCKET;TTS_DRIVER=google;TTS_LANGUAGE=en-GB" \
+  --set-env-vars="^;^SEED_DEMO_DATA=false;TRUST_PROXY=2;LIVE_TRUST_PROXY=1;CORS_ORIGIN=https://$SITE.web.app;LIVE_CORS_ORIGINS=https://$SITE.web.app,https://$SITE.firebaseapp.com;STORAGE_DRIVER=gcs;GCS_BUCKET=$BUCKET;TTS_DRIVER=google;TTS_LANGUAGE=en-GB" \
   --set-secrets=JWT_SECRET=jwt-secret:latest,MONGODB_URI=mongodb-uri:latest,GOOGLE_TTS_API_KEY=tts-api-key:latest
 ```
 
@@ -119,6 +127,7 @@ Giải thích các tham số chính:
 
 - **`--service-account`:** Cloud Run chạy bằng `enquiz-api`, chỉ có quyền ghi bucket và đọc ba secret, không dùng tài khoản mặc định có quyền Editor cả project.
 - **`^;^` trong `--set-env-vars`:** đổi dấu tách thành `;`, để `LIVE_CORS_ORIGINS` chứa được dấu phẩy.
+- **`TRUST_PROXY=2`, `LIVE_TRUST_PROXY=1`:** HTTP đi qua hai proxy (Firebase Hosting rồi Cloud Run), còn socket Đấu trường đi thẳng vào Cloud Run (một proxy). Tin nhiều proxy hơn thực tế thì client giả được IP bằng header `X-Forwarded-For`, và lách được giới hạn theo IP. Đã đo trên hạ tầng thật: với 1 thì HTTP thấy IP của Google; với 2 thì đúng IP thật. Ai gọi thẳng `run.app` vẫn giả được IP cho HTTP; giới hạn theo username (D14) vẫn chặn dò mật khẩu.
 - **`--max-instances=1`:** giới hạn đăng nhập và phòng Đấu trường nằm trong RAM của từng instance. Nếu chạy nhiều instance thì cần chuyển sang Redis.
 - **Chế độ tiết kiệm (mặc định):** `--min-instances=0` và CPU chỉ cấp khi có request. Không có ai dùng thì không tốn tiền. Mọi tính năng chạy bình thường, **trừ Đấu trường**: đồng hồ câu hỏi chỉ chạy khi CPU được cấp, và máy có thể bị tắt giữa trận.
 - **Bật Đấu trường (D19)** trước giờ lớp chơi hoặc khi chạy bước 8 của mục 6, tắt lại khi xong:
@@ -158,8 +167,9 @@ cd ..
 
 1. Mở `https://$SITE.web.app/api/v1/health`. Kết quả phải là `{"status":"ok","clientIp":"…"}`.
 2. **So `clientIp` với IP thật của bạn** (ví dụ xem ở https://ifconfig.me).
-   - Nếu `clientIp` là IP của Google, tăng số proxy lên: `gcloud run services update enquiz-api --region=$REGION --update-env-vars=TRUST_PROXY=2`, rồi kiểm tra lại.
+   - Nếu `clientIp` là IP của Google, tăng `TRUST_PROXY` thêm 1 (`gcloud run services update enquiz-api --region=$REGION --update-env-vars=TRUST_PROXY=3`), rồi kiểm tra lại.
    - Nếu để sai, mọi người sẽ dùng chung một bộ đếm giới hạn đăng nhập.
+   - Mạng có nhiều IP ra ngoài (trường, công ty) thì `ifconfig.me` có thể hiện IP khác giữa các lần; chỉ cần `clientIp` là một trong các IP đó.
 3. Đăng nhập bằng admin ở bước 1. Đăng ký thử một giáo viên, rồi duyệt tài khoản đó.
 4. Giáo viên upload một ảnh câu hỏi. Ảnh phải có URL `https://storage.googleapis.com/<bucket>/images/…` và hiển thị được. Nếu lỗi, xem log:
    ```bash
@@ -178,7 +188,7 @@ cd ..
    # Giữ 65 phút: mỗi kết nối bị Cloud Run cắt một lần ở phút 60 rồi tự nối lại
    node scripts/live-check.mjs --url $RUN_URL --hold 65
    ```
-   - `clientIp` khác IP thật thì chỉnh `TRUST_PROXY` như bước 2 (socket đọc `X-Forwarded-For` theo cùng biến).
+   - `clientIp` khác IP thật thì chỉnh `LIVE_TRUST_PROXY` (socket đi thẳng vào Cloud Run, thường là 1).
    - Trình duyệt báo lỗi CORS khi mở socket: kiểm tra `LIVE_CORS_ORIGINS` có đúng domain đang mở trang không.
    - Thử tải một phòng 60 học sinh (tạo lớp và tài khoản thử, **chỉ chạy vào DB thử**, không vào dữ liệu thật): `node scripts/live-load.mjs --url $RUN_URL --players 60 --teacher <giáo viên thử>:<mật khẩu>`.
    - Xong thì tắt Đấu trường (mục 4) nếu chưa dùng thật.
@@ -189,6 +199,45 @@ cd ..
    curl -s https://$SITE.web.app/sitemap.xml
    ```
    Mở site bằng Chrome, F12 → Console: không có dòng `Refused to … Content Security Policy`. Dán link site vào Zalo hoặc Messenger: thấy ảnh và mô tả EnQuiz.
+
+## Giữ chi phí bằng 0 (hạn mức miễn phí)
+
+Với lượng dùng thử nghiệm, mọi dịch vụ nằm trong hạn mức miễn phí, **miễn là**:
+
+- Cloud Run ở chế độ tiết kiệm (`--min-instances=0`, CPU chỉ cấp khi có request). Bật Đấu trường (mục 4) là tính phí theo giờ: chỉ bật khi lớp chơi, chơi xong tắt ngay.
+- Không bật Cloud Armor, load balancer, IP tĩnh hay domain trả phí.
+
+Ngân sách trên Google Cloud **chỉ gửi email**, không tự chặn chi phí. Đặt cảnh báo ở mức thấp, chỉ cho project này (đơn vị tiền phải trùng với tài khoản thanh toán, ví dụ `VND`):
+
+```bash
+BILLING=$(gcloud billing projects describe $PROJECT_ID --format='value(billingAccountName)' | sed 's#billingAccounts/##')
+gcloud services enable billingbudgets.googleapis.com
+gcloud billing budgets create --billing-account=$BILLING --display-name="EnQuiz - canh bao chi phi"   --budget-amount=25000VND --filter-projects=projects/$PROJECT_ID   --threshold-rule=percent=0.01 --threshold-rule=percent=0.5 --threshold-rule=percent=1.0   --threshold-rule=percent=1.0,basis=forecasted-spend
+```
+
+Tự dọn những thứ tăng dần theo thời gian:
+
+```bash
+# Kho image: giữ 3 bản mới nhất, xoá bản cũ hơn 7 ngày (hạn mức miễn phí 0,5 GB)
+cat > /tmp/ar-cleanup.json <<'JSON'
+[
+  {"name": "keep-latest-3", "action": {"type": "Keep"}, "mostRecentVersions": {"keepCount": 3}},
+  {"name": "delete-older", "action": {"type": "Delete"}, "condition": {"olderThan": "604800s"}}
+]
+JSON
+gcloud artifacts repositories set-cleanup-policies enquiz --location=$REGION --policy=/tmp/ar-cleanup.json --no-dry-run
+# File nguồn Cloud Build tải lên: xoá sau 7 ngày
+echo '{"rule":[{"action":{"type":"Delete"},"condition":{"age":7}}]}' > /tmp/lifecycle.json
+gcloud storage buckets update gs://${PROJECT_ID}_cloudbuild --lifecycle-file=/tmp/lifecycle.json
+```
+
+Những khoản có thể phát sinh vài đồng dù dùng ít:
+
+- Bucket ảnh và âm thanh ở `asia-southeast1`: hạn mức lưu trữ miễn phí của Cloud Storage chỉ áp dụng cho vài region ở Mỹ. Ảnh đã được thu nhỏ trước khi upload (B2), nên vài trăm ảnh vẫn dưới 100 MB, tức dưới 0,01 USD/tháng.
+- Lưu lượng tải ảnh, âm thanh từ bucket về Việt Nam khi có nhiều học sinh dùng.
+- Text-to-Speech: miễn phí 4 triệu ký tự/tháng (giọng Standard). Âm thanh được tạo một lần rồi lưu lại.
+
+Mỗi tháng xem Billing → Reports, lọc theo project, để chắc vẫn bằng 0.
 
 ## Cập nhật và rollback
 

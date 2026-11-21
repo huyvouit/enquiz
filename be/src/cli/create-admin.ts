@@ -8,6 +8,8 @@
  * Password: ADMIN_PASSWORD if set (at least 12 characters), otherwise a random
  * one printed once. An existing username is never changed.
  */
+// Must stay the first import: turns the demo seed off (see cli-env.ts).
+import './cli-env.js';
 import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
 import bcrypt from 'bcryptjs';
@@ -29,7 +31,10 @@ function fail(message: string): never {
 }
 
 async function main() {
-  const [rawUsername, fullName] = process.argv.slice(2);
+  // npm on Windows passes arguments through cmd.exe, which can leave `^`
+  // escapes in a quoted name ("^Admin^ Enquiz^"); a name never contains one.
+  const [rawUsername, rawFullName] = process.argv.slice(2);
+  const fullName = rawFullName?.replaceAll('^', '');
   if (!rawUsername || !fullName?.trim()) {
     fail('Usage: npm run create:admin -- <username> "<Full Name>"');
   }
