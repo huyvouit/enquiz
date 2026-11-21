@@ -32,6 +32,7 @@ Quy tắc chung, cách chạy và danh sách tính năng: xem [README gốc](../
 | `AUTH_RATE_LIMIT` | `10` | Số lần đăng nhập/đăng ký mỗi phút cho **một username** (chống dò mật khẩu) |
 | `AUTH_IP_RATE_LIMIT` | `100` | Số lần đăng nhập/đăng ký mỗi phút cho **một IP**; để cao vì cả trường thường dùng chung một IP |
 | `TRUST_PROXY` | `0` | Số proxy đứng trước API (Express `trust proxy`) để giới hạn nhìn đúng IP thật; kiểm tra bằng `clientIp` trong `GET /api/v1/health` |
+| `LIVE_TRUST_PROXY` | = `TRUST_PROXY` | Như trên, cho socket Đấu trường. Socket đi thẳng vào Cloud Run nên production đặt ít hơn `TRUST_PROXY` một đơn vị (`TRUST_PROXY=2`, `LIVE_TRUST_PROXY=1`) |
 | `STORAGE_DRIVER` | `local` | Nơi lưu ảnh và âm thanh: `local`, `s3` (S3, R2, MinIO… cần khoá) hoặc `gcs` (Cloud Storage, không cần khoá: dùng danh tính tài khoản chạy app; production) |
 | `UPLOAD_DIR` | `uploads` | `local`: thư mục lưu ảnh (đã `.gitignore`) |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_PUBLIC_URL` | — | `s3`: bucket và URL công khai (gốc bucket; file nằm dưới `images/`, `audio/`); khoá lấy từ `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |

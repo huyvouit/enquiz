@@ -53,7 +53,7 @@ export class LiveAuthService {
 
 /**
  * The client address as Express would compute it with `trust proxy = hops`
- * (TRUST_PROXY, plan D14): count `hops` addresses back from the socket peer
+ * (LIVE_TRUST_PROXY, plan D14): count `hops` addresses back from the socket peer
  * through X-Forwarded-For. Socket.io does not apply Express's setting.
  */
 export function clientIp(
