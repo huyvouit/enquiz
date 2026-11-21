@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { LiveRoom } from './live-room.registry.js';
 import { LiveRoomRegistry } from './live-room.registry.js';
-import { SlidingWindowLimiter } from './rate-limiter.js';
+import { SlidingWindowLimiter } from '../../common/rate-limit/sliding-window-limiter.js';
 
 const MINUTE = 60_000;
 /** Wrong PINs per key per minute before a one-minute pause (L4). */

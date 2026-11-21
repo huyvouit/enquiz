@@ -11,6 +11,17 @@ export class TeachesStudentQuery extends Query<boolean> {
   }
 }
 
+/**
+ * Ids of every student in this teacher's classes, archived ones included
+ * (past results stay visible to their own teacher). Used to limit what a
+ * quiz author sees of a shared quiz to their own students (launch A1).
+ */
+export class TaughtStudentIdsQuery extends Query<string[]> {
+  constructor(public readonly teacherId: string) {
+    super();
+  }
+}
+
 /** A class as other modules need it, after the access check. */
 export interface ClassAccess {
   id: string;

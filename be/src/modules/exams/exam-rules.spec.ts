@@ -6,9 +6,9 @@ import {
 } from '../../common/utils/exam-time.js';
 import { seededRandom, shuffle } from '../../common/utils/shuffle.js';
 import { QuestionType } from '../questions/question-types.js';
+import { cleanAnswer } from '../progress/grading/clean-answer.js';
 import { scramble } from '../quizzes/quizzes.mapper.js';
 import {
-  cleanAnswer,
   cleanAnswers,
   cleanFlags,
   completedAtOf,

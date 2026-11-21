@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,6 +17,7 @@ import bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { AccountStatus } from '../../../../common/enums/account-status.enum.js';
 import { Role } from '../../../../common/enums/role.enum.js';
+import { SlidingWindowLimiter } from '../../../../common/rate-limit/sliding-window-limiter.js';
 import { escapeRegex } from '../../../../common/utils/regex.js';
 import {
   BCRYPT_ROUNDS,
@@ -49,9 +52,19 @@ import {
 } from '../impl/class.commands.js';
 
 const CLASS_FULL = `Lớp đã đủ ${CLASS_MAX_STUDENTS} học sinh`;
+/** Wrong class codes per student per minute before a pause (launch A3). */
+export const WRONG_CODES_PER_MINUTE = 10;
+export const TOO_MANY_CODES =
+  'Em nhập sai mã nhiều quá, chờ 1 phút rồi thử lại nhé';
 
 @CommandHandler(JoinClassCommand)
 export class JoinClassHandler implements ICommandHandler<JoinClassCommand> {
+  /** Codes are 6 letters: without a limit a script could guess them. */
+  private readonly wrongCodes = new SlidingWindowLimiter(
+    WRONG_CODES_PER_MINUTE,
+    60_000,
+  );
+
   constructor(
     @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
@@ -59,10 +72,14 @@ export class JoinClassHandler implements ICommandHandler<JoinClassCommand> {
   ) {}
 
   async execute({ code, user }: JoinClassCommand): Promise<StudentClassView> {
+    if (!this.wrongCodes.allowed(user.userId)) {
+      throw new HttpException(TOO_MANY_CODES, HttpStatus.TOO_MANY_REQUESTS);
+    }
     const c = await this.classModel
       .findOne({ code: normalizeClassCode(code), status: ClassStatus.ACTIVE })
       .lean();
     if (!c) {
+      this.wrongCodes.hit(user.userId);
       throw new NotFoundException(
         'Mã lớp không đúng. Em kiểm tra lại với cô nhé!',
       );
