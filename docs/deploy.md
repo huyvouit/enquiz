@@ -11,6 +11,8 @@ Trình duyệt ──► wss://enquiz-api-….run.app/live  (Đấu trường)
 
 Các lệnh viết cho bash (Git Bash hoặc Cloud Shell), chạy từ thư mục gốc repo.
 
+**Git Bash trên Windows** tự đổi tham số bắt đầu bằng `/` thành đường dẫn Windows (`/api/v1/health` thành `/C:/Program Files/Git/api/v1/health`) mà không báo lỗi. Với tham số như vậy, chặn việc đổi cho riêng tham số đó: `MSYS2_ARG_CONV_EXCL="--path=" gcloud …`. Đừng dùng `MSYS_NO_PATHCONV=1`, vì nó làm hỏng chính đường dẫn để chạy `gcloud`.
+
 **Không có khoá dài hạn nào.** Cloud Run chạy bằng tài khoản dịch vụ `enquiz-api` và ghi vào bucket bằng chính danh tính đó (`STORAGE_DRIVER=gcs`, D18). Tổ chức Google Cloud mới mặc định chặn tạo khoá cho tài khoản dịch vụ (`iam.disableServiceAccountKeyCreation`), nên cách dùng khoá HMAC với `STORAGE_DRIVER=s3` không chạy được ở đây. Các secret còn lại (JWT, chuỗi kết nối Mongo, khoá TTS) nằm trong Secret Manager.
 
 ## 0. Chuẩn bị
@@ -250,19 +252,68 @@ TAG=$(git rev-parse --short HEAD)
 gcloud builds submit be --tag $REPO/api:$TAG
 gcloud run deploy enquiz-api --image=$REPO/api:$TAG --region=$REGION
 
-# Quay lại revision trước
+# Quay lại revision trước (đã thử 2026-11-21: ~25 giây, /health không gián đoạn)
 gcloud run revisions list --service=enquiz-api --region=$REGION
 gcloud run services update-traffic enquiz-api --region=$REGION --to-revisions=<REVISION>=100
+# Sửa xong thì trả traffic về bản mới nhất (~5 giây)
+gcloud run services update-traffic enquiz-api --region=$REGION --to-latest
 
 # Frontend
 cd fe && npm run build && firebase deploy --only hosting
 # Rollback frontend: Firebase Console → Hosting → Release history → Rollback
 ```
 
+Rollback cũng đổi phiên bản Đấu trường: trận đang diễn ra trên máy cũ vẫn tiếp tục cho tới khi các kết nối đóng.
+
+## Vận hành: backup, theo dõi lỗi, kiểm tra sống
+
+### Backup DB (Atlas M0 không có backup tự động)
+
+```bash
+cd be
+# Chỉ đọc DB; ghi be/backups/<db>-<thời điểm>.ndjson.gz (đã .gitignore)
+MONGODB_URI=$(gcloud secrets versions access latest --secret=mongodb-uri) npm run backup:db
+```
+
+- Chạy **hằng tuần** và trước mỗi lần sửa dữ liệu bằng tay. File chứa dữ liệu học sinh và mật khẩu đã băm: giữ ở nơi riêng tư (ổ mã hoá, Drive cá nhân), không gửi qua chat.
+- Khôi phục vào một DB trống (cluster mới, DB thử):
+  ```bash
+  MONGODB_URI=<DB đích> npm run restore:db -- backups/<file>.ndjson.gz
+  # Thay dữ liệu DB đang có: phải gõ lại tên DB đích
+  MONGODB_URI=<DB đích> npm run restore:db -- backups/<file>.ndjson.gz --replace <tên DB>
+  ```
+- Đã thử khôi phục: dữ liệu giống hệt bản gốc (kể cả ObjectId, Date) và đủ index.
+
+### Error Reporting (lỗi của backend)
+
+Trên Cloud Run, backend ghi log dạng JSON có `severity` (`CloudLogger`, bật khi có biến `K_SERVICE` mà Cloud Run tự đặt). Lỗi có stack trace được Cloud Error Reporting gom nhóm.
+
+```bash
+gcloud services enable clouderrorreporting.googleapis.com
+```
+
+- Xem: Console → Error Reporting. Bật email khi có lỗi mới: Error Reporting → *Configure notifications* → chọn kênh email.
+- Lọc log theo mức: Logs Explorer, `severity>=ERROR`.
+
+### Uptime check (site còn sống không)
+
+Mỗi 15 phút, từ 3 vùng, gọi `/api/v1/health` qua Firebase (kiểm tra cả Hosting lẫn Cloud Run). Nằm trong hạn mức miễn phí.
+
+```bash
+gcloud services enable monitoring.googleapis.com
+MSYS2_ARG_CONV_EXCL="--path=" gcloud monitoring uptime create enquiz-health \
+  --resource-type=uptime-url --resource-labels=host=$SITE.web.app,project_id=$PROJECT_ID \
+  --path=/api/v1/health --protocol=https --period=15 \
+  --regions=asia-pacific,usa-oregon,europe \
+  --matcher-content='"status":"ok"' --matcher-type=contains-string
+```
+
+Gửi email khi uptime check thất bại: Console → Monitoring → Uptime checks → `enquiz-health` → *Create alert*, chọn kênh email.
+
 ## Chưa làm trong 4.0
 
 Các mục còn lại xem [roadmap.md](roadmap.md):
 
-- **Sentry:** cần tạo tài khoản.
-- **Backup Atlas.**
+- **Sentry:** chưa cần; Error Reporting ở trên đã gom lỗi backend. Lỗi ở trình duyệt chưa được thu.
+- **Lịch backup tự động** (Cloud Scheduler + Cloud Run job): hiện chạy tay hằng tuần.
 - **Đồng ý của phụ huynh (Nghị định 13/2023):** chặn việc mở cho trường thật.

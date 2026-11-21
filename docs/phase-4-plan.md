@@ -1,6 +1,6 @@
 # Kế hoạch Giai đoạn 4 – Lên production, dọn nợ, Exam Mode & UX
 
-> Trạng thái: **Đang triển khai** · 4.0: **hạ tầng đã dựng, production đang chạy** (2026-11-21) · 4.1: xong · 4.2: code xong ([tài liệu 14](features/14-exam-mode.md)), chưa chạy trên môi trường deploy · 4.3: **tạm hoãn** (làm Giai đoạn 5 trước, xem [phase-5-plan.md](phase-5-plan.md)) · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
+> Trạng thái: **Đang triển khai** · 4.0: **xong** (đóng 2026-11-21, production đang chạy) · 4.1: xong · 4.2: code xong ([tài liệu 14](features/14-exam-mode.md)), chưa chạy trên môi trường deploy · 4.3: **tạm hoãn** (làm Giai đoạn 5 trước, xem [phase-5-plan.md](phase-5-plan.md)) · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
 
 Bản nháp lộ trình ban đầu đặt Giai đoạn 4 là "Cải thiện UX/DX, Exam Mode & Dọn nợ nền tảng", còn việc deploy để tận Giai đoạn 6. Khi rà soát, có ba lý do khiến deploy phải lên trước:
 - Đáp án câu nghe đang bị lộ qua `audioText`.
@@ -373,10 +373,29 @@ Dữ liệu thử tạo ra khi kiểm tra (lớp, 182 tài khoản thử, bài l
 - Socket dùng chung `TRUST_PROXY` với HTTP nên giả được IP: thêm `LIVE_TRUST_PROXY`.
 - Cloud Run mặc định 80 request/máy: phòng 60 em bị trả 429. Thêm `--concurrency=500`.
 
-**Còn lại để đóng 4.0**
-- Phần C của [launch-checklist.md](launch-checklist.md): backup Atlas, Error Reporting và uptime check, thử rollback, Lighthouse.
-- Đổi mật khẩu 3 tài khoản gốc trên production (chức năng đã có, D20); `teacher`/`student` đang trùng tài khoản demo trong repo.
-- Sentry; đồng ý của phụ huynh trước khi mở cho trường thật.
+### Kết quả vận hành (phần C của launch-checklist) và đóng 4.0
+
+> Ngày: 2026-11-21 · Nhánh `feat/4.0-ops` (chưa commit) · Trạng thái: **4.0 đóng**
+
+| Mục | Kết quả |
+| --- | --- |
+| C1 Ngân sách | Cảnh báo mức thấp, tự dọn image cũ và file tạm của Cloud Build |
+| C2 Backup | `npm run backup:db` / `restore:db` (EJSON, giữ kiểu dữ liệu và index; khôi phục chỉ vào DB trống hoặc khi gõ lại tên DB). Đã thử khôi phục: giống hệt bản gốc. Đã sao lưu production lần đầu, file ở máy người vận hành |
+| C3 Theo dõi lỗi | `CloudLogger`: trên Cloud Run log là JSON có `severity`, lỗi có stack trace được Error Reporting gom nhóm (đã thử bằng một lỗi mẫu). Uptime check `/api/v1/health` mỗi 15 phút từ 3 vùng. **Email cảnh báo: tạm bỏ qua** (xem trên Console) |
+| C5 Rollback | Về revision trước ~25 giây, trả về bản mới ~5 giây, `/health` luôn 200 |
+| C6 Lighthouse | Trang đăng nhập: điện thoại 94/93/100/100, máy tính 100/93/100/100 (Hiệu năng/Trợ năng/Thực hành tốt/SEO). Link trong câu thêm gạch chân |
+
+**Phát hiện trong lúc làm**
+- Git Bash trên Windows tự đổi `--path=/api/v1/health` thành đường dẫn Windows, nên uptime check gọi sai địa chỉ mà không báo lỗi. Đã sửa; `deploy.md` có lưu ý (`MSYS2_ARG_CONV_EXCL`).
+- `CloudLogger` ban đầu lặp nội dung lỗi ("boom" rồi "Error: boom…"). Unit test bắt được, đã sửa.
+
+**Kiểm tra:** backend lint, prettier sạch; 127 unit test (6 mới cho `CloudLogger`), 97 e2e test pass; frontend `tsc`, lint, build sạch.
+
+**Để sau (không chặn việc đóng 4.0)**
+- Chủ tài khoản đổi mật khẩu 3 tài khoản gốc trên production (chức năng đã có, D20).
+- Email cảnh báo cho Error Reporting và uptime check; lịch backup tự động.
+- Sentry cho lỗi ở trình duyệt.
+- Đồng ý của phụ huynh (Nghị định 13/2023) trước khi mở cho trường thật.
 
 ### Kết quả đổi mật khẩu (D20)
 

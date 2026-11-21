@@ -119,7 +119,7 @@ export function RegisterPage() {
       </form>
       <p className="mt-5 text-center font-semibold text-ink-soft">
         Đã có tài khoản?{' '}
-        <Link to="/login" className="text-brand underline-offset-2 hover:underline">
+        <Link to="/login" className="text-brand underline underline-offset-2 hover:text-brand-dark">
           Đăng nhập
         </Link>
       </p>

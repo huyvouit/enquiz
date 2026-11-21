@@ -64,7 +64,7 @@ src/
     ├── live/                 # 15 – Đấu trường: gateway Socket.io /live, máy trạng thái, phòng trong RAM
     ├── analytics/            # 12 – thống kê, bản đồ nhiệt, xuất Excel/PDF
     └── uploads/              # ảnh câu hỏi (@nestjs/storage)
-scripts/                      # migrate-phase2/3.mjs, lib.mjs (dùng chung), live-check.mjs (kiểm tra kết nối socket Đấu trường), live-load.mjs (thử tải 60 người một phòng, tạo lớp thử)
+scripts/                      # migrate-phase2/3.mjs, lib.mjs (dùng chung), backup-db.mjs / restore-db.mjs (`npm run backup:db`, `restore:db`: sao lưu và khôi phục DB, xem `deploy.md`), live-check.mjs (kiểm tra kết nối socket Đấu trường), live-load.mjs (thử tải 60 người một phòng, tạo lớp thử)
 test/app.e2e-spec.ts          # E2E giai đoạn 1–2
 test/phase3.e2e-spec.ts       # E2E giai đoạn 3
 test/exam.e2e-spec.ts         # E2E chế độ kiểm tra (4.2)

@@ -57,7 +57,7 @@ export function LoginPage() {
       </form>
       <p className="mt-5 text-center font-semibold text-ink-soft">
         Chưa có tài khoản?{' '}
-        <Link to="/register" className="text-brand underline-offset-2 hover:underline">
+        <Link to="/register" className="text-brand underline underline-offset-2 hover:text-brand-dark">
           Đăng ký
         </Link>
       </p>
