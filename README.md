@@ -116,6 +116,12 @@ npm run lint
 - **Dữ liệu học sinh** mà giáo viên xem được (kể cả file xuất) phải đi qua kiểm tra lớp: `ClassAccessQuery(classId, user, 'manage')` hoặc `TeachesStudentQuery`. Thiếu kiểm tra → trả 404.
 - Module tránh phụ thuộc vòng: module "phía trên" import module "phía dưới" (`analytics → assignments → classes/progress/quizzes`); chiều ngược lại chỉ đi qua `QueryBus` (ví dụ `AssignedQuizIdsQuery`, `AssignmentPlayAccessQuery`).
 - Logic thuần (chấm điểm, validate nội dung câu hỏi) có unit test `*.spec.ts`; mỗi luồng API mới thêm vào `test/app.e2e-spec.ts`.
+- **Socket (Đấu trường, giai đoạn 5):**
+  - Sự kiện đặt tên `vai_trò:hành_động` (`host:start`, `player:answer`, `session:whoami`).
+  - Dữ liệu client gửi lên được kiểm tra kiểu và giới hạn (`isPin`, `isSmallInt`… trong `live.gateway.ts`) trước khi vào máy trạng thái; ack luôn có dạng `{ ok, error?, message? }`.
+  - Không gửi đáp án qua socket trước pha công bố.
+  - Trạng thái realtime chỉ nằm trong `LiveRoomRegistry`; luật nằm trong reducer thuần `live-room.machine.ts`.
+  - Guard và interceptor toàn cục chỉ dành cho HTTP (`context.getType() === 'http'`). Socket xác thực **một lần lúc bắt tay** (`LiveAuthService`).
 
 ### 2.5 Frontend (React – feature-first)
 ```
@@ -180,3 +186,4 @@ fe/src/
 | 12 | Thống kê & phân tích cho giáo viên, xuất Excel/PDF | 3 | [12-teacher-analytics.md](docs/features/12-teacher-analytics.md) |
 | 13 | Nhập câu hỏi từ CSV, nội dung chuẩn | 3 | [13-question-import.md](docs/features/13-question-import.md) |
 | 14 | Chế độ Kiểm tra (Exam Mode): phòng thi, đồng hồ, lưu nháp, chấm khi nộp | 4 | [14-exam-mode.md](docs/features/14-exam-mode.md) |
+| 15 | Đấu trường trực tuyến (Live Quiz, Socket.io): PIN/QR, màn chiếu, điểm tốc độ, vào lại khi F5, khách vãng lai | 5 | [15-live-quiz.md](docs/features/15-live-quiz.md) |

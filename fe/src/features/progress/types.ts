@@ -42,7 +42,8 @@ export interface AttemptProgression {
 }
 
 /** classic: practice (map or homework). exam: timed test (plan 4.2). */
-export type AttemptMode = 'classic' | 'exam'
+/** live: a live quiz match (plan 5), counted like practice. */
+export type AttemptMode = 'classic' | 'exam' | 'live'
 
 export interface AttemptResult {
   attemptId: string

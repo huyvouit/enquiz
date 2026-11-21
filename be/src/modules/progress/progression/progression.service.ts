@@ -156,6 +156,9 @@ export class ProgressionService {
     correctCount: number;
     score: number;
     durationSec: number;
+    /** live = a live quiz match (plan 5, L8); counts like practice. */
+    mode?: 'classic' | 'live';
+    completedAt?: Date;
   }) {
     const { studentId, quiz, score } = input;
     const studentOid = new Types.ObjectId(studentId);
@@ -189,6 +192,8 @@ export class ProgressionService {
       levelAfter,
       durationSec: input.durationSec,
       details: input.details,
+      mode: input.mode ?? 'classic',
+      ...(input.completedAt ? { completedAt: input.completedAt } : {}),
     });
 
     const user = await this.userModel.findByIdAndUpdate(

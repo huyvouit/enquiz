@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { LiveIoAdapter } from '../modules/live/live-io.adapter.js';
 import { HttpExceptionFilter } from './filters/http-exception.filter.js';
 import { ResponseInterceptor } from './interceptors/response.interceptor.js';
 
@@ -19,4 +20,6 @@ export function setupApp(app: INestApplication): void {
   );
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
+  // Live quiz sockets (plan 5): CORS and timeouts of the /live namespace.
+  app.useWebSocketAdapter(new LiveIoAdapter(app));
 }

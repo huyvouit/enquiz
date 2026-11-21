@@ -15,6 +15,9 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // HTTP only. Socket events (live quiz, plan 5) are authenticated once at
+    // the handshake by LiveAuthService: there are no headers per message.
+    if (context.getType() !== 'http') return true;
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),

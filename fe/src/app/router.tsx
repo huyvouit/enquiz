@@ -36,6 +36,13 @@ const MapOrderPage = lazyPage(() => import('@/features/admin/pages/MapOrderPage'
 const ClassWorkspacePage = lazyPage(() => import('./ClassWorkspacePage'), (m) => m.default)
 // Student page, but loaded on demand: only exam homework needs it.
 const ExamPage = lazyPage(() => import('@/features/exam/pages/ExamPage'), (m) => m.ExamPage)
+// Live quiz (plan 5): one chunk per screen, loaded only when used.
+const LiveJoinPage = lazyPage(() => import('@/features/live/pages/LiveJoinPage'), (m) => m.LiveJoinPage)
+const LivePlayPage = lazyPage(() => import('@/features/live/pages/LivePlayPage'), (m) => m.LivePlayPage)
+const LiveSetupPage = lazyPage(() => import('@/features/live/pages/LiveSetupPage'), (m) => m.LiveSetupPage)
+const LiveHostPage = lazyPage(() => import('@/features/live/pages/LiveHostPage'), (m) => m.LiveHostPage)
+const LiveHistoryPage = lazyPage(() => import('@/features/live/pages/LiveHistoryPage'), (m) => m.LiveHistoryPage)
+const LiveReportPage = lazyPage(() => import('@/features/live/pages/LiveReportPage'), (m) => m.LiveReportPage)
 
 const staff: Role[] = ['teacher', 'admin']
 
@@ -53,6 +60,11 @@ export const router = createBrowserRouter([
   { path: '/register', element: <GuestOnly><RegisterPage /></GuestOnly> },
   // Exam room (plan 4.2): full screen, outside AppLayout.
   { path: '/exam/:assignmentId', element: guarded(['student'], <ExamPage />) },
+  // Live quiz (plan 5): public join + play (guests have no account),
+  // and the full-screen projector, all outside AppLayout.
+  { path: '/live', element: <Suspense fallback={<Spinner />}><LiveJoinPage /></Suspense> },
+  { path: '/live/play', element: <Suspense fallback={<Spinner />}><LivePlayPage /></Suspense> },
+  { path: '/teacher/live/:matchId/host', element: guarded(staff, <LiveHostPage />) },
   {
     element: (
       <RequireAuth>
@@ -78,6 +90,9 @@ export const router = createBrowserRouter([
       { path: '/teacher/questions', element: guarded(staff, <QuestionBankPage />) },
       { path: '/teacher/questions/new', element: guarded(staff, <QuestionEditorPage />) },
       { path: '/teacher/questions/import', element: guarded(staff, <QuestionImportPage />) },
+      { path: '/teacher/live', element: guarded(staff, <LiveHistoryPage />) },
+      { path: '/teacher/live/new', element: guarded(staff, <LiveSetupPage />) },
+      { path: '/teacher/live/:matchId', element: guarded(staff, <LiveReportPage />) },
       { path: '/teacher/questions/:id/edit', element: guarded(staff, <QuestionEditorPage />) },
       { path: '/teacher/quizzes/new', element: guarded(staff, <QuizBuilderPage />) },
       { path: '/teacher/quizzes/:id/edit', element: guarded(staff, <QuizBuilderPage />) },

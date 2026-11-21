@@ -24,7 +24,7 @@ Quy tắc chung (cấu trúc feature-first, quy tắc import, style), cách ch�
 ```
 src/
 ├── app/          # router, layout, bootstrap (nối các feature)
-├── shared/       # api (axios, query-client), components, hooks, lib, sound (09), speech (TTS) — không import features/
+├── shared/       # api (axios, query-client), components, hooks, lib, sound (09), speech (TTS), live (socket Đấu trường, 15) — không import features/
 └── features/
     ├── auth/        # 01 – đăng nhập, đăng ký, guard route, màn chờ duyệt
     ├── admin/       # 01, 07 – duyệt/khoá tài khoản, thứ tự trạm bản đồ
@@ -51,6 +51,9 @@ Import alias: `@/` = `src/` (ví dụ `import { Button } from '@/shared/componen
 | `/leaderboard` | Mọi vai trò | Bảng xếp hạng |
 | `/play/:quizId` | Mọi vai trò | Chơi quiz (giáo viên: xem thử) |
 | `/exam/:assignmentId` | Học sinh | Bài kiểm tra: giới thiệu → phòng thi → kết quả (toàn màn hình, ngoài `AppLayout`) |
+| `/live`, `/live/play` | Công khai (học sinh, khách) | Đấu trường: nhập PIN/biệt danh → màn chơi (ngoài `AppLayout`) |
+| `/teacher/live`, `/teacher/live/new`, `/teacher/live/:matchId` | Giáo viên/Admin | Đấu trường: lịch sử, mở phòng, báo cáo trận |
+| `/teacher/live/:matchId/host` | Giáo viên/Admin | Màn chiếu trận đấu (toàn màn hình, ngoài `AppLayout`) |
 | `/attempts/:attemptId` | Học sinh / giáo viên | Kết quả & xem lại |
 | `/teacher` | Giáo viên/Admin | Dashboard quiz |
 | `/teacher/questions[/new\|/:id/edit]` | Giáo viên/Admin | Kho câu hỏi |

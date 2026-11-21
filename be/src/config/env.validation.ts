@@ -9,6 +9,12 @@ export interface AppEnv {
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
   CORS_ORIGIN: string;
+  /**
+   * Origins allowed to open the live quiz socket (plan 5, D19), comma
+   * separated. The socket goes straight to Cloud Run, so the Firebase domain
+   * must be listed.
+   */
+  LIVE_CORS_ORIGINS: string;
   SEED_DEMO_DATA: boolean;
   /** Login/register attempts allowed per username per minute. */
   AUTH_RATE_LIMIT: number;
@@ -58,6 +64,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     JWT_SECRET: str('JWT_SECRET'),
     JWT_EXPIRES_IN: str('JWT_EXPIRES_IN', '7d'),
     CORS_ORIGIN: str('CORS_ORIGIN', 'http://localhost:5173'),
+    LIVE_CORS_ORIGINS: str('LIVE_CORS_ORIGINS', 'http://localhost:5173'),
     SEED_DEMO_DATA: str('SEED_DEMO_DATA', 'false') === 'true',
     AUTH_RATE_LIMIT: Number(str('AUTH_RATE_LIMIT', '10')),
     AUTH_IP_RATE_LIMIT: Number(str('AUTH_IP_RATE_LIMIT', '100')),

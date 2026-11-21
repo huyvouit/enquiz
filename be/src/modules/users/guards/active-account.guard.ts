@@ -24,6 +24,9 @@ export class ActiveAccountGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // HTTP only. Socket events (live quiz, plan 5) are authenticated once at
+    // the handshake by LiveAuthService: there are no headers per message.
+    if (context.getType() !== 'http') return true;
     const user = context.switchToHttp().getRequest().user as
       AuthUser | undefined;
     if (!user) return true; // @Public() endpoint
