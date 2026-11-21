@@ -32,7 +32,7 @@ export function QuestionPreview({ question, actions }: { question: Question; act
 
       <div className="flex items-start gap-3">
         {question.mediaUrl ? (
-          <img src={question.mediaUrl} alt="" className="h-14 w-auto max-w-24 rounded-lg object-contain" />
+          <img src={question.mediaUrl} alt="" loading="lazy" decoding="async" className="h-14 w-auto max-w-24 rounded-lg object-contain" />
         ) : null}
         <div>
           <p className="text-lg font-bold">
