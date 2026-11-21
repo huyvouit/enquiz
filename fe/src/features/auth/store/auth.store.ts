@@ -14,6 +14,8 @@ interface AuthState {
    * approved a teacher). Logs out if the token is invalid or the account is disabled.
    */
   refreshProfile: () => Promise<void>
+  /** Keeps this device logged in with the new token; others must log in again. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
   logout: () => void
 }
 
@@ -39,6 +41,11 @@ export const useAuthStore = create<AuthState>()(
       async refreshProfile() {
         const user = await authApi.profile()
         set({ user })
+      },
+
+      async changePassword(currentPassword, newPassword) {
+        const { accessToken, user } = await authApi.changePassword(currentPassword, newPassword)
+        set({ token: accessToken, user })
       },
 
       logout() {

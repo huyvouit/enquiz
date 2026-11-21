@@ -9,6 +9,10 @@ import {
   kidPassword,
 } from '../../../../common/utils/passwords.js';
 import { TeachesStudentQuery } from '../../../classes/queries/impl/class-membership.queries.js';
+import {
+  AccountStatusService,
+  passwordChangeStamp,
+} from '../../account-status.service.js';
 import { User } from '../../schemas/user.schema.js';
 import {
   ResetPasswordCommand,
@@ -20,6 +24,7 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly queryBus: QueryBus,
+    private readonly statuses: AccountStatusService,
   ) {}
 
   async execute({
@@ -46,10 +51,15 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
     }
 
     const temporaryPassword = kidPassword();
+    // The old password may be known to someone else: end its sessions (D20).
     await this.userModel.updateOne(
       { _id: target._id },
-      { password: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS) },
+      {
+        password: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS),
+        passwordChangedAt: passwordChangeStamp(),
+      },
     );
+    this.statuses.invalidate(target._id.toString());
     return {
       userId: target._id.toString(),
       username: target.username,

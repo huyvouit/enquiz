@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
-import { GuestOnly, LoginPage, RegisterPage, RequireAuth } from '@/features/auth'
+import { ChangePasswordPage, GuestOnly, LoginPage, RegisterPage, RequireAuth } from '@/features/auth'
 import { MyAssignmentsPage } from '@/features/assignments'
 import { PlayPage } from '@/features/play'
 import { AttemptPage, HistoryPage, LeaderboardPage } from '@/features/progress'
@@ -83,6 +83,7 @@ export const router = createBrowserRouter([
           { path: '/history', element: guarded(['student'], <HistoryPage />) },
           // Any role
           { path: '/leaderboard', element: <LeaderboardPage /> },
+          { path: '/account/password', element: <ChangePasswordPage /> },
           // Any role (teachers use /play as a preview)
           { path: '/play/:quizId', element: <PlayPage /> },
           { path: '/attempts/:attemptId', element: <AttemptPage /> },

@@ -38,15 +38,22 @@ export class LiveAuthService {
     } catch {
       throw new LiveAuthError('unauthorized');
     }
-    const status = await this.statuses.get(payload.sub);
-    if (status === null || status === AccountStatus.DISABLED) {
+    const state = await this.statuses.getState(payload.sub);
+    if (state === null || state.status === AccountStatus.DISABLED) {
       throw new LiveAuthError('unauthorized');
     }
-    if (status === AccountStatus.PENDING) throw new LiveAuthError('pending');
+    // A token from before the last password change (D20).
+    if (!AccountStatusService.tokenStillValid(state, payload.iat)) {
+      throw new LiveAuthError('unauthorized');
+    }
+    if (state.status === AccountStatus.PENDING) {
+      throw new LiveAuthError('pending');
+    }
     return {
       userId: payload.sub,
       username: payload.username,
       role: payload.role,
+      issuedAt: payload.iat,
     };
   }
 }

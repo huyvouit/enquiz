@@ -35,18 +35,19 @@ Giai đoạn 3 bổ sung:
 | POST | `/auth/register` | Công khai | Đăng ký học sinh/giáo viên, trả `{ accessToken, user }` |
 | POST | `/auth/login` | Công khai | Đăng nhập, trả `{ accessToken, user }` |
 | GET | `/users/profile` | Mọi vai trò, kể cả `pending` | Người dùng hiện tại (có `status`; học sinh kèm lớp, cấp, XP) |
+| POST | `/auth/change-password` | Mọi vai trò, kể cả `pending` | `{ currentPassword, newPassword }` → `{ accessToken, user }`; các máy khác bị đăng xuất (D20) |
 | GET | `/admin/users?role&status&search&page&limit` | Admin | Danh sách có phân trang, mới nhất trước; `search` khớp tên hoặc tên đăng nhập |
 | PATCH | `/admin/users/:id/status` | Admin | `{ status: "active" \| "disabled" }`: duyệt, mở khoá, khoá |
 | POST | `/admin/users/:id/reset-password` | Admin | Cấp mật khẩu tạm (trả **một lần**) |
 | POST | `/classes/:id/students/:studentId/reset-password` | Giáo viên của lớp | Như trên, cho học sinh lớp mình (tài liệu 10) |
 | GET | `/health` | Công khai | Kiểm tra server sống |
 
-- Command: `RegisterCommand`, `LoginCommand`, `SetUserStatusCommand`, `ResetPasswordCommand` · Query: `GetProfileQuery`, `ListUsersQuery`.
-- Collection `users`: `username` (unique, lowercase), `password` (bcrypt, `select: false`), `fullName`, `role`, `status`, `studentProfile?` `{ gradeLevel, level, xp }` (cấp/XP: tài liệu [07](07-progression-quest-map.md)).
-- Payload JWT: `{ sub: userId, username, role }`. **Không** chứa `status`, vì admin đổi status bất cứ lúc nào.
+- Command: `RegisterCommand`, `LoginCommand`, `ChangePasswordCommand`, `SetUserStatusCommand`, `ResetPasswordCommand` · Query: `GetProfileQuery`, `ListUsersQuery`.
+- Collection `users`: `username` (unique, lowercase), `password` (bcrypt, `select: false`), `fullName`, `role`, `status`, `studentProfile?` `{ gradeLevel, level, xp }` (cấp/XP: tài liệu [07](07-progression-quest-map.md)), `passwordChangedAt` (lần đổi hoặc đặt lại mật khẩu gần nhất, làm tròn tới giây).
+- Payload JWT: `{ sub: userId, username, role, iat }`. **Không** chứa `status`, vì admin đổi status bất cứ lúc nào.
 - Guard toàn cục, theo thứ tự:
   1. `JwtAuthGuard`: mọi endpoint cần token, trừ khi gắn `@Public()`.
-  2. `ActiveAccountGuard`: đọc `status` qua `AccountStatusService` (cache 30 giây trong bộ nhớ; admin đổi status thì xoá cache ngay trong cùng tiến trình). `pending` chỉ qua được endpoint gắn `@AllowPending()`.
+  2. `ActiveAccountGuard`: đọc `status` và `passwordChangedAt` qua `AccountStatusService` (cache 30 giây trong bộ nhớ; đổi status hoặc mật khẩu thì xoá cache ngay trong cùng tiến trình). `pending` chỉ qua được endpoint gắn `@AllowPending()`. Token có `iat` trước `passwordChangedAt` → **401** "Mật khẩu vừa được đổi. Vui lòng đăng nhập lại". Socket Đấu trường kiểm tra giống vậy lúc bắt tay.
   3. `RolesGuard`: đọc `@Roles(...)`; không gắn = mọi người đã đăng nhập.
 - Quy tắc:
   - Không tự đăng ký được `admin` (400). Admin tạo bằng seed/vận hành.
@@ -56,7 +57,12 @@ Giai đoạn 3 bổ sung:
   - **Chống dò mật khẩu:** `/auth/login` và `/auth/register` giới hạn `AUTH_RATE_LIMIT` lần/phút/IP (mặc định 10, `@nestjs/throttler`). Vượt → **429** "Bạn thử quá nhiều lần rồi. Vui lòng đợi một phút rồi thử lại nhé"; frontend hiện nguyên câu này.
   - Admin không đổi được status của chính mình hay của admin khác; không cấp lại được mật khẩu admin.
   - Giáo viên chỉ cấp lại được mật khẩu học sinh đang ở **một lớp đang hoạt động của mình** (`TeachesStudentQuery`). Người khác → 404.
-  - **Mật khẩu tạm** dạng `tiger42` (từ tiếng Anh dễ + 2 số): chỉ trả trong response đó, không lưu dạng đọc được, không ghi log.
+  - **Mật khẩu tạm** dạng `tiger42` (từ tiếng Anh dễ + 2 số): chỉ trả trong response đó, không lưu dạng đọc được, không ghi log. Cấp mật khẩu tạm cũng đăng xuất mọi phiên cũ của người đó.
+  - **Đổi mật khẩu (D20):**
+    - Phải nhập đúng mật khẩu hiện tại. Sai thì trả **400**, không trả 401, để frontend không đăng xuất.
+    - Mật khẩu mới: admin ít nhất 12 ký tự, vai trò khác ít nhất 6; phải khác mật khẩu cũ và khác username.
+    - Giới hạn 10 lần/phút/tài khoản (`@RateLimit`).
+    - Trả token mới cho máy đang dùng; token cấp trước lúc đổi bị từ chối.
 - Thêm `helmet` cho mọi response.
 
 ## Frontend
@@ -67,6 +73,7 @@ Giai đoạn 3 bổ sung:
   - `RequireAuth roles={[...]}` chặn route theo vai trò. Nếu `user.status === 'pending'` thì hiển thị `PendingApprovalPage` thay cho mọi màn hình, **không cần route riêng**. "Kiểm tra lại" gọi `refreshProfile()`; còn chờ thì báo nhẹ.
   - State: `useAuthStore` (Zustand + `persist`, key `enquiz-auth`) giữ `token`, `user` (có `status`). Đăng xuất thì xoá toàn bộ cache TanStack Query.
   - `app/bootstrap.ts` nối store với axios: gắn token mỗi request, gặp 401 thì `logout()`. Khi mở app, nếu có token cũ thì gọi lại `/users/profile` (cập nhật cả `status`).
+  - Route `/account/password` (`ChangePasswordPage`, mọi vai trò, trong `AppLayout`); link 🔑 cạnh tên người dùng trên thanh menu. Đổi xong, `changePassword()` trong store lưu token mới.
 - Feature `fe/src/features/admin/`, route `/admin/users` (`AdminUsersPage`, chỉ admin):
   - Tab **Chờ duyệt** (kèm số lượng) / **Giáo viên** / **Học sinh** / **Đã khoá** / **Tất cả**, ô tìm kiếm, phân trang 20 dòng.
   - Mỗi dòng: **✅ Duyệt** (tài khoản chờ), **🔒 Khoá** / **🔓 Mở khoá**, **🔑 Mật khẩu**. Khoá và cấp lại mật khẩu đều hỏi xác nhận.
