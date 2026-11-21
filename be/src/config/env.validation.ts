@@ -32,6 +32,12 @@ export interface AppEnv {
    */
   LIVE_TRUST_PROXY: number;
   /**
+   * Release shown by /health (plan D21): set per Cloud Run revision by
+   * scripts/release.sh from the repo's VERSION file and git commit.
+   */
+  APP_VERSION: string;
+  GIT_COMMIT: string;
+  /**
    * Where question images and listening audio go: `local` disk, an
    * S3-compatible bucket (`s3`, needs keys) or Cloud Storage signed in as the
    * service account the app runs as (`gcs`, no keys; plan D18).
@@ -82,6 +88,8 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     AUTH_IP_RATE_LIMIT: Number(str('AUTH_IP_RATE_LIMIT', '100')),
     TRUST_PROXY: Number(str('TRUST_PROXY', '0')),
     LIVE_TRUST_PROXY: Number(str('LIVE_TRUST_PROXY', str('TRUST_PROXY', '0'))),
+    APP_VERSION: str('APP_VERSION', 'dev'),
+    GIT_COMMIT: str('GIT_COMMIT', 'unknown'),
     STORAGE_DRIVER: str('STORAGE_DRIVER', 'local') as AppEnv['STORAGE_DRIVER'],
     UPLOAD_DIR: str('UPLOAD_DIR', 'uploads'),
     S3_BUCKET: str('S3_BUCKET', ''),

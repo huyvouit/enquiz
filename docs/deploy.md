@@ -112,6 +112,8 @@ done
 
 ## 4. Backend lên Cloud Run
 
+> Chỉ dùng cho **lần dựng hạ tầng đầu tiên**. Các lần sau: [Phát hành theo phiên bản](#phát-hành-theo-phiên-bản), có bước chủ dự án xác nhận.
+
 ```bash
 TAG=$(git rev-parse --short HEAD)
 # be/.gcloudignore ngăn tải .env và node_modules lên Cloud Build
@@ -149,6 +151,8 @@ Giải thích các tham số chính:
 - **Sự kiện chạy nền:** việc thêm/gỡ học sinh khỏi bài tập đã được chạy và chờ xong ngay trong request (D13), nên chạy đúng cả khi CPU chỉ cấp trong request.
 
 ## 5. Frontend lên Firebase Hosting
+
+> Chỉ dùng cho **lần dựng hạ tầng đầu tiên**. Các lần sau: [Phát hành theo phiên bản](#phát-hành-theo-phiên-bản), có bước chủ dự án xác nhận.
 
 `fe/firebase.json` deploy tới target `app`. Target này được gắn với site thật trong `fe/.firebaserc`; file đó **không commit** (đã `.gitignore`), vì chứa ID project.
 
@@ -244,26 +248,42 @@ Những khoản có thể phát sinh vài đồng dù dùng ít:
 
 Mỗi tháng xem Billing → Reports, lọc theo project, để chắc vẫn bằng 0.
 
-## Cập nhật và rollback
+## Phát hành theo phiên bản
 
+Quyết định D21 ([phase-6-plan.md](phase-6-plan.md)). Mỗi lần đưa code mới lên production là **một phiên bản**: số trong file `VERSION` (SemVer), mục tương ứng trong `CHANGELOG.md`, git tag `vX.Y.Z`, image `api:X.Y.Z`, Cloud Run revision tag `vX-Y-Z` và kênh xem trước Firebase `vX-Y-Z`. **Mọi lần phát hành phải được chủ dự án xác nhận** trước khi nhận traffic.
+
+Chuẩn bị một lần trên máy phát hành: `cp .env.release.example .env.release` rồi điền giá trị thật (file này không commit).
+
+1. **Chuẩn bị phiên bản** (PR như mọi thay đổi khác): tăng `VERSION`, thêm mục `## [X.Y.Z] – <ngày>` vào `CHANGELOG.md` (thay đổi chính, PR, việc cần làm khi deploy). Merge vào `main`.
+2. **Deploy không traffic**, trên `main` đã cập nhật:
+   ```bash
+   scripts/release.sh prepare
+   ```
+   - Kiểm tra: đúng dạng `VERSION`, có mục CHANGELOG, đang ở `main` và trùng `origin/main`, tag chưa tồn tại.
+   - Build image `api:X.Y.Z`; deploy revision **0% traffic** có tag `vX-Y-Z` (đặt `APP_VERSION`, `GIT_COMMIT`); build frontend và deploy vào kênh xem trước `vX-Y-Z` (giữ 30 ngày).
+   - Tự kiểm tra `/api/v1/health` của revision và `version.json` của kênh xem trước đúng phiên bản; in hai URL thử.
+   - Site trên kênh xem trước vẫn gọi API của bản **đang chạy** (rewrite của Firebase trỏ vào traffic chính). API mới thử qua URL của revision.
+3. **Kiểm tra** trên hai URL thử (đăng nhập, luồng chính của thay đổi).
+4. **Hỏi chủ dự án**, kèm mục CHANGELOG và hai URL thử. Chỉ khi được đồng ý:
+   ```bash
+   scripts/release.sh promote
+   ```
+   Chuyển 100% traffic sang revision `vX-Y-Z`, đưa kênh xem trước lên site chính (`hosting:clone`), kiểm tra `/api/v1/health` và `/version.json` của site chính, rồi đẩy git tag `vX.Y.Z`.
+5. Ghi kết quả (phiên bản, revision) vào bảng dưới.
+
+Xem production đang chạy gì: `scripts/release.sh status`. Chạy thử không đụng hạ tầng: `DRY_RUN=1 scripts/release.sh prepare`.
+
+**Rollback theo phiên bản** (đã thử chuyển traffic 2026-11-21: ~25 giây, `/health` không gián đoạn):
 ```bash
-# Backend: build tag mới rồi deploy (env, secret và tài khoản chạy được giữ nguyên)
-TAG=$(git rev-parse --short HEAD)
-gcloud builds submit be --tag $REPO/api:$TAG
-gcloud run deploy enquiz-api --image=$REPO/api:$TAG --region=$REGION
-
-# Quay lại revision trước (đã thử 2026-11-21: ~25 giây, /health không gián đoạn)
-gcloud run revisions list --service=enquiz-api --region=$REGION
-gcloud run services update-traffic enquiz-api --region=$REGION --to-revisions=<REVISION>=100
-# Sửa xong thì trả traffic về bản mới nhất (~5 giây)
-gcloud run services update-traffic enquiz-api --region=$REGION --to-latest
-
-# Frontend
-cd fe && npm run build && firebase deploy --only hosting
-# Rollback frontend: Firebase Console → Hosting → Release history → Rollback
+scripts/release.sh rollback <X.Y.Z trước đó>
 ```
+Chuyển traffic về revision có tag của phiên bản đó và đưa kênh xem trước của nó lên lại site chính. Kênh xem trước hết hạn sau 30 ngày: khi đó rollback frontend trên Firebase Console → Hosting → Release history. Rollback cũng đổi phiên bản Đấu trường: trận đang diễn ra trên máy cũ vẫn tiếp tục cho tới khi các kết nối đóng.
 
-Rollback cũng đổi phiên bản Đấu trường: trận đang diễn ra trên máy cũ vẫn tiếp tục cho tới khi các kết nối đóng.
+Bản đang chạy trước `v1.0.0` không có tag. Muốn quay về bản đó: `gcloud run services update-traffic enquiz-api --region=$REGION --to-revisions=<revision cũ>=100` và rollback frontend trên Console.
+
+| Phiên bản | Ngày | Cloud Run revision | Ghi chú |
+| --- | --- | --- | --- |
+| (trước v1.0.0) | 2026-11-21 | `enquiz-api-00006` | image `85ab510`, deploy bằng tay |
 
 ## Vận hành: backup, theo dõi lỗi, kiểm tra sống
 

@@ -51,7 +51,12 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
     const res = await http.get(`${API}/health`).expect(200);
     expect(res.body).toEqual({
       success: true,
-      data: { status: 'ok', clientIp: expect.any(String) },
+      data: {
+        status: 'ok',
+        clientIp: expect.any(String),
+        version: 'dev',
+        commit: 'unknown',
+      },
     });
   });
 

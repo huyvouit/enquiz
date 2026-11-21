@@ -194,3 +194,32 @@ Thứ tự (đã chốt): **6.5 → 6.1 → 6.3 → 6.4 → 6.2**; 4.3 vẫn t�
 2. **D22:** ô "Ghi nhớ đăng nhập" mặc định tắt; tắt = phiên 12 giờ; bật = **7 ngày** kể từ lần dùng gần nhất, **tối đa 14 ngày** kể từ lúc đăng nhập.
 3. **D23:** đăng nhập Google cho **mọi tài khoản Google** (giáo viên mới vẫn chờ admin duyệt).
 4. **Thứ tự** 6.5 → 6.1 → 6.3 → 6.4 → 6.2; 4.3 vẫn tạm hoãn.
+
+---
+
+## Kết quả các mốc
+
+### Kết quả 6.5
+
+> Ngày: 2026-11-21 · Nhánh `feat/6.5-versioning` (chưa commit) · Trạng thái: **code xong**, chưa phát hành `v1.0.0` (chờ merge, rồi `release.sh prepare` và chủ dự án xác nhận)
+
+**Đã làm**
+
+| Việc | Chi tiết | File chính |
+| --- | --- | --- |
+| Số phiên bản | `VERSION` = `1.0.0`; `CHANGELOG.md` có mục `[1.0.0]` | `VERSION`, `CHANGELOG.md` |
+| Backend | `/api/v1/health` trả thêm `version`, `commit` (biến `APP_VERSION`, `GIT_COMMIT`; mặc định `dev`/`unknown`) | `health.controller.ts`, `env.validation.ts` |
+| Frontend | Vite đọc `VERSION` và commit lúc build; chân trang `EnQuiz vX.Y.Z` (commit trong tooltip) ở mọi trang đã đăng nhập và trang đăng nhập/đăng ký; sinh `version.json` (no-cache) | `vite.config.ts`, `shared/version/*`, `AppLayout.tsx`, `AuthCard.tsx`, `firebase.json` |
+| Script phát hành | `scripts/release.sh prepare | promote | status | rollback <x.y.z>`; `DRY_RUN=1`; giá trị thật trong `.env.release` (không commit, có `.env.release.example`) | `scripts/release.sh` |
+| Tài liệu | `deploy.md` mục "Phát hành theo phiên bản" (quy trình 5 bước, rollback, bảng phiên bản); bước 4–5 ghi rõ chỉ dùng lần đầu; README mục 2.8 Phát hành | `deploy.md`, `README.md` |
+
+**Kết quả kiểm tra**
+- Backend: lint, prettier sạch; **127 unit**, **97 e2e** test pass (test health kiểm tra `version`, `commit`).
+- Frontend: `tsc`, lint, build sạch. Bản build chứa `1.0.0` và commit; `version.json` đúng; chân trang hiện `EnQuiz v1.0.0` (ảnh chụp trên điện thoại).
+- `release.sh`: `DRY_RUN=1 prepare` chạy đủ các bước kiểm tra (VERSION, CHANGELOG, tag) và in đúng lệnh build/deploy; `status` đọc được production hiện tại (báo "before versioning"); `DRY_RUN=1 rollback` in đúng lệnh.
+- **Chưa kiểm tra:** `prepare`/`promote` chạy thật — làm khi phát hành `v1.0.0`.
+
+**Phát hiện trong lúc làm**
+- Kênh xem trước của Firebase vẫn gọi API của bản đang chạy (rewrite `/api` trỏ vào traffic chính của Cloud Run), nên API mới thử qua URL của revision. Đã ghi vào quy trình; với thay đổi API không tương thích sẽ cần `minClientVersion` (6.4).
+- Bản production trước `v1.0.0` không có tag: rollback về nó bằng tên revision (ghi trong `deploy.md`).
+

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { Mascot } from '@/shared/components'
+import { VersionTag } from '@/shared/version'
 
 /** Centered card layout shared by the login and register pages. */
 export function AuthCard({ title, mascotSays, children }: { title: string; mascotSays: string; children: ReactNode }) {
@@ -21,6 +22,7 @@ export function AuthCard({ title, mascotSays, children }: { title: string; masco
         <h1 className="mb-4 text-2xl font-extrabold">{title}</h1>
         {children}
       </motion.div>
+      <VersionTag className="mt-6" />
     </div>
   )
 }

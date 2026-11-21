@@ -166,6 +166,11 @@ fe/src/
 - Nhánh: `feature/<tên>`, `fix/<tên>`. Commit theo Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
 - Trước khi tạo PR: `lint`, `test`, `test:e2e` (be) và `build`, `lint` (fe) đều phải qua.
 
+### 2.8 Phát hành
+- Production chỉ nhận code qua **phiên bản** (D21): `VERSION` + mục `CHANGELOG.md` + `scripts/release.sh` ([deploy.md](docs/deploy.md#phát-hành-theo-phiên-bản)).
+- **Mọi lần phát hành phải được chủ dự án xác nhận** trước khi chuyển traffic (`release.sh prepare` → hỏi → `release.sh promote`). Không deploy thẳng bằng `gcloud run deploy` hay `firebase deploy`.
+- Giá trị thật của hạ tầng nằm trong `.env.release` (không commit); repo là public.
+
 ---
 
 ## 3. Danh sách tính năng
