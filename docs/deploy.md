@@ -200,6 +200,45 @@ cd ..
    ```
    Mở site bằng Chrome, F12 → Console: không có dòng `Refused to … Content Security Policy`. Dán link site vào Zalo hoặc Messenger: thấy ảnh và mô tả EnQuiz.
 
+## Giữ chi phí bằng 0 (hạn mức miễn phí)
+
+Với lượng dùng thử nghiệm, mọi dịch vụ nằm trong hạn mức miễn phí, **miễn là**:
+
+- Cloud Run ở chế độ tiết kiệm (`--min-instances=0`, CPU chỉ cấp khi có request). Bật Đấu trường (mục 4) là tính phí theo giờ: chỉ bật khi lớp chơi, chơi xong tắt ngay.
+- Không bật Cloud Armor, load balancer, IP tĩnh hay domain trả phí.
+
+Ngân sách trên Google Cloud **chỉ gửi email**, không tự chặn chi phí. Đặt cảnh báo ở mức thấp, chỉ cho project này (đơn vị tiền phải trùng với tài khoản thanh toán, ví dụ `VND`):
+
+```bash
+BILLING=$(gcloud billing projects describe $PROJECT_ID --format='value(billingAccountName)' | sed 's#billingAccounts/##')
+gcloud services enable billingbudgets.googleapis.com
+gcloud billing budgets create --billing-account=$BILLING --display-name="EnQuiz - canh bao chi phi"   --budget-amount=25000VND --filter-projects=projects/$PROJECT_ID   --threshold-rule=percent=0.01 --threshold-rule=percent=0.5 --threshold-rule=percent=1.0   --threshold-rule=percent=1.0,basis=forecasted-spend
+```
+
+Tự dọn những thứ tăng dần theo thời gian:
+
+```bash
+# Kho image: giữ 3 bản mới nhất, xoá bản cũ hơn 7 ngày (hạn mức miễn phí 0,5 GB)
+cat > /tmp/ar-cleanup.json <<'JSON'
+[
+  {"name": "keep-latest-3", "action": {"type": "Keep"}, "mostRecentVersions": {"keepCount": 3}},
+  {"name": "delete-older", "action": {"type": "Delete"}, "condition": {"olderThan": "604800s"}}
+]
+JSON
+gcloud artifacts repositories set-cleanup-policies enquiz --location=$REGION --policy=/tmp/ar-cleanup.json --no-dry-run
+# File nguồn Cloud Build tải lên: xoá sau 7 ngày
+echo '{"rule":[{"action":{"type":"Delete"},"condition":{"age":7}}]}' > /tmp/lifecycle.json
+gcloud storage buckets update gs://${PROJECT_ID}_cloudbuild --lifecycle-file=/tmp/lifecycle.json
+```
+
+Những khoản có thể phát sinh vài đồng dù dùng ít:
+
+- Bucket ảnh và âm thanh ở `asia-southeast1`: hạn mức lưu trữ miễn phí của Cloud Storage chỉ áp dụng cho vài region ở Mỹ. Ảnh đã được thu nhỏ trước khi upload (B2), nên vài trăm ảnh vẫn dưới 100 MB, tức dưới 0,01 USD/tháng.
+- Lưu lượng tải ảnh, âm thanh từ bucket về Việt Nam khi có nhiều học sinh dùng.
+- Text-to-Speech: miễn phí 4 triệu ký tự/tháng (giọng Standard). Âm thanh được tạo một lần rồi lưu lại.
+
+Mỗi tháng xem Billing → Reports, lọc theo project, để chắc vẫn bằng 0.
+
 ## Cập nhật và rollback
 
 ```bash
