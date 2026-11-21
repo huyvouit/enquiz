@@ -17,12 +17,12 @@ export class ImageStorageService {
   ) {}
 
   get isLocal(): boolean {
-    return this.config.get('STORAGE_DRIVER') !== 's3';
+    return this.config.get('STORAGE_DRIVER') === 'local';
   }
 
   /**
    * Local: a path on this API (same origin through the Vite proxy or a
-   * reverse proxy). S3: the bucket's public URL.
+   * reverse proxy). S3 / GCS: the bucket's public URL.
    */
   publicUrl(key: string): string {
     return this.isLocal

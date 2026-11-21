@@ -23,5 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Firebase CLI cache (.firebaserc with the project id is committed)
+# Firebase CLI cache, and .firebaserc: it holds the real project id and site
+# (public repo); each machine creates it, see docs/deploy.md step 5.
 .firebase/
+.firebaserc

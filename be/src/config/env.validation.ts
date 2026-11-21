@@ -25,15 +25,21 @@ export interface AppEnv {
    * `req.ip` is the real client. 0 = connected directly (local dev).
    */
   TRUST_PROXY: number;
-  /** Where uploaded question images go: `local` disk or an S3-compatible bucket. */
-  STORAGE_DRIVER: 'local' | 's3';
+  /**
+   * Where question images and listening audio go: `local` disk, an
+   * S3-compatible bucket (`s3`, needs keys) or Cloud Storage signed in as the
+   * service account the app runs as (`gcs`, no keys; plan D18).
+   */
+  STORAGE_DRIVER: 'local' | 's3' | 'gcs';
   /** Local driver: folder for uploads (relative to the working directory). */
   UPLOAD_DIR: string;
   S3_BUCKET: string;
   S3_REGION: string;
   S3_ENDPOINT: string;
-  /** Public base URL the bucket's images are served from. */
+  /** Public base URL of the bucket (files are under images/ and audio/). */
   S3_PUBLIC_URL: string;
+  /** `gcs`: bucket name; files are public at storage.googleapis.com/<bucket>. */
+  GCS_BUCKET: string;
   /**
    * Text-to-speech for listening questions (plan D16): `google` (Cloud
    * Text-to-Speech), `none` (no audio is made; questions show "no audio yet")
@@ -75,6 +81,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     S3_REGION: str('S3_REGION', ''),
     S3_ENDPOINT: str('S3_ENDPOINT', ''),
     S3_PUBLIC_URL: str('S3_PUBLIC_URL', ''),
+    GCS_BUCKET: str('GCS_BUCKET', ''),
     TTS_DRIVER: str('TTS_DRIVER', 'none') as AppEnv['TTS_DRIVER'],
     GOOGLE_TTS_API_KEY: str('GOOGLE_TTS_API_KEY', ''),
     TTS_LANGUAGE: str('TTS_LANGUAGE', 'en-GB'),
@@ -82,13 +89,16 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   };
 
   if (Number.isNaN(env.PORT)) errors.push('PORT must be a number');
-  if (env.STORAGE_DRIVER !== 'local' && env.STORAGE_DRIVER !== 's3') {
-    errors.push('STORAGE_DRIVER must be local or s3');
+  if (!['local', 's3', 'gcs'].includes(env.STORAGE_DRIVER)) {
+    errors.push('STORAGE_DRIVER must be local, s3 or gcs');
   }
   if (env.STORAGE_DRIVER === 's3' && (!env.S3_BUCKET || !env.S3_PUBLIC_URL)) {
     errors.push(
       'S3_BUCKET and S3_PUBLIC_URL are required when STORAGE_DRIVER=s3',
     );
+  }
+  if (env.STORAGE_DRIVER === 'gcs' && !env.GCS_BUCKET) {
+    errors.push('GCS_BUCKET is required when STORAGE_DRIVER=gcs');
   }
   if (!['none', 'google', 'fake'].includes(env.TTS_DRIVER)) {
     errors.push('TTS_DRIVER must be none, google or fake');
