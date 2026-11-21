@@ -4,6 +4,18 @@ Mọi thay đổi người dùng thấy được của EnQuiz, theo phiên bản
 
 Mỗi mục ghi: thay đổi chính, PR liên quan, và **việc cần làm khi deploy** (biến môi trường mới, migrate) nếu có.
 
+## [Unreleased]
+
+Dự kiến `1.1.0`. Đổi tên mục này thành số phiên bản khi chuẩn bị phát hành.
+
+- **Phiên đăng nhập** (6.1, D22): access token 15 phút chỉ nằm trong RAM, refresh token trong cookie `__session` (HttpOnly, SameSite=Strict), đổi mới mỗi lần dùng; dùng lại token cũ thì thu hồi cả phiên. Ô **"Ghi nhớ đăng nhập trên máy này"** (mặc định tắt: 12 giờ; bật: 7 ngày kể từ lần dùng gần nhất, tối đa 14 ngày). Nút **"Đăng xuất mọi thiết bị"** ở trang Đổi mật khẩu. Đăng xuất, đổi/đặt lại mật khẩu, khoá tài khoản có hiệu lực ngay, cả với socket Đấu trường.
+- **Mật khẩu được hash trong trình duyệt** (D26, theo yêu cầu chủ dự án): API chỉ nhận `SHA-256("enquiz-pw-v1:" + username + ":" + mật khẩu)`; server lưu bcrypt của chuỗi đó. App cũ gửi mật khẩu rõ sẽ nhận thông báo "Ứng dụng đã cũ, vui lòng tải lại trang".
+
+**Khi deploy:**
+- Mọi người phải đăng nhập lại một lần (token 7 ngày cũ không còn hợp lệ).
+- **Tài khoản tạo trước bản này không đăng nhập được** cho tới khi đặt lại mật khẩu (server chưa từng thấy mật khẩu ở dạng đổi được). Ngay sau `promote`, chạy `npm run set:password -- <username>` (trong `be/`, `MONGODB_URI` của production) cho từng tài khoản; học sinh có thể được giáo viên đặt lại mật khẩu trong app.
+- Không có biến môi trường bắt buộc mới (mặc định: `JWT_EXPIRES_IN=15m`, `REFRESH_TTL_SESSION=12h`, `REFRESH_TTL_REMEMBER=7d`, `REFRESH_MAX_REMEMBER=14d`). Collection mới `auth_sessions` tự tạo, có TTL index.
+
 ## [1.0.0] – 2026-11-21
 
 Bản phát hành đầu tiên có số phiên bản. Gồm mọi thứ đã làm từ giai đoạn 1 tới 5, cùng 4.0–4.2:

@@ -8,12 +8,12 @@ import { useLiveSocket } from './useLiveSocket'
  * reconnect or F5, plan L10) and keeps the latest `host:state` snapshot.
  */
 export function useHostSession(matchId: string) {
-  const token = useAuthStore((s) => s.token)
+  const userId = useAuthStore((s) => s.user?.id ?? null)
   const [view, setView] = useState<LiveHostView | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [closed, setClosed] = useState(false)
 
-  const live = useLiveSocket(token, {
+  const live = useLiveSocket(userId, {
     onConnect: async (socket) => {
       const ack = (await socket.timeout(10_000).emitWithAck('host:attach', { matchId }).catch(() => null)) as
         | { ok: true; state: LiveHostView }

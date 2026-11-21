@@ -1,23 +1,28 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
-import bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
-import { Role } from '../../../../common/enums/role.enum.js';
-import { BCRYPT_ROUNDS } from '../../../../common/utils/passwords.js';
+import {
+  clientPasswordHash,
+  hashForStorage,
+  passwordMatches,
+} from '../../../../common/utils/passwords.js';
 import {
   AccountStatusService,
   passwordChangeStamp,
 } from '../../../users/account-status.service.js';
+import { AuthSessionService } from '../../../users/sessions/auth-session.service.js';
 import { User } from '../../../users/schemas/user.schema.js';
 import { toPublicUser } from '../../../users/users.mapper.js';
 import { AuthResult } from '../../auth.types.js';
 import { TokenService } from '../../token.service.js';
 import { ChangePasswordCommand } from '../impl/change-password.command.js';
 
-/** Same minimum as sign-up; admins as `create:admin` (plan D20). */
-export const MIN_PASSWORD = 6;
-export const MIN_ADMIN_PASSWORD = 12;
+/**
+ * Both passwords arrive as client hashes, so the length rules (6, admins 12;
+ * plan D20) are checked in the browser. The server still refuses the
+ * username itself and the current password.
+ */
 
 @CommandHandler(ChangePasswordCommand)
 export class ChangePasswordHandler implements ICommandHandler<ChangePasswordCommand> {
@@ -25,6 +30,7 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly tokenService: TokenService,
     private readonly statuses: AccountStatusService,
+    private readonly sessions: AuthSessionService,
   ) {}
 
   async execute({
@@ -41,19 +47,17 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     }
 
     // 400, not 401: the app treats 401 as "session over" and logs out.
-    if (!(await bcrypt.compare(currentPassword, account.password))) {
+    if (!(await passwordMatches(currentPassword, account.password))) {
       throw new BadRequestException('Mật khẩu hiện tại không đúng');
     }
-    const min = account.role === Role.ADMIN ? MIN_ADMIN_PASSWORD : MIN_PASSWORD;
-    if (newPassword.length < min) {
-      throw new BadRequestException(`Mật khẩu mới cần ít nhất ${min} ký tự`);
-    }
-    if (newPassword.toLowerCase() === account.username) {
+    if (
+      newPassword === clientPasswordHash(account.username, account.username)
+    ) {
       throw new BadRequestException(
         'Mật khẩu mới không được trùng tên đăng nhập',
       );
     }
-    if (await bcrypt.compare(newPassword, account.password)) {
+    if (await passwordMatches(newPassword, account.password)) {
       throw new BadRequestException('Mật khẩu mới phải khác mật khẩu hiện tại');
     }
 
@@ -61,12 +65,14 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     await this.userModel.updateOne(
       { _id: account._id },
       {
-        password: await bcrypt.hash(newPassword, BCRYPT_ROUNDS),
+        password: await hashForStorage(newPassword),
         passwordChangedAt: passwordChangeStamp(),
       },
     );
     this.statuses.invalidate(user.userId);
-    // Signed after the stamp, so this device stays logged in.
-    return this.tokenService.issue(toPublicUser(account));
+    // Other devices lose their sessions (D22); this one keeps its own, and
+    // its new access token is signed after the stamp.
+    await this.sessions.revokeAll(user.userId, user.sessionId);
+    return this.tokenService.issue(toPublicUser(account), user.sessionId!);
   }
 }

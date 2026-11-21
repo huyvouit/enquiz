@@ -155,7 +155,9 @@ fe/src/
 
 ### 2.6 Bảo mật & cấu hình
 - **Không commit file `.env`** (đã có trong `.gitignore`). Mỗi biến mới phải thêm vào `.env.example` kèm chú thích và vào `be/src/config/env.validation.ts`.
-- `JWT_SECRET` ≥ 16 ký tự, ngẫu nhiên. Mật khẩu băm bằng bcrypt; trường `password` có `select: false`.
+- `JWT_SECRET` ≥ 16 ký tự, ngẫu nhiên. Trường `password` có `select: false`.
+- **Mật khẩu không bao giờ rời trình duyệt ở dạng rõ** (D26): app gửi `passwordHash(username, mật khẩu)` (SHA-256), server lưu bcrypt của chuỗi đó. Hàm hash ở `fe/src/shared/lib/password-hash.ts` và `be/src/common/utils/passwords.ts` phải giống hệt nhau (có bộ giá trị mẫu chung trong test). Quy tắc độ dài mật khẩu kiểm tra ở frontend. Mật khẩu do server tạo (tạm, seed, CLI) lưu bằng `hashPlainForStorage`.
+- **Phiên đăng nhập** (D22): access token 15 phút chỉ nằm trong RAM; refresh token trong cookie `__session` (HttpOnly, SameSite=Strict, chỉ gửi tới `/api/v1/auth`). **Không lưu token hay dữ liệu API trong `localStorage`/cache trình duyệt** (trừ cài đặt giao diện). API mới không đọc cookie, trừ `/auth/refresh` và `/auth/logout`. Đổi/đặt lại mật khẩu và khoá tài khoản phải thu hồi phiên (`AuthSessionService.revokeAll`).
 - Không tự đăng ký được vai trò `admin`. Giáo viên tự đăng ký ở trạng thái **chờ duyệt**.
 - Đăng nhập/đăng ký bị giới hạn `AUTH_RATE_LIMIT` lần/phút/username và `AUTH_IP_RATE_LIMIT` lần/phút/IP (429); sau proxy phải đặt đúng `TRUST_PROXY`. `helmet` bật cho mọi response.
 - **Mật khẩu tạm** (tạo hàng loạt, đặt lại) chỉ trả về **một lần**, không lưu dạng rõ, không ghi log.

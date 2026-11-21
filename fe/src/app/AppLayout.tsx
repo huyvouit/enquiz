@@ -83,8 +83,7 @@ export function AppLayout() {
             <button
               type="button"
               onClick={() => {
-                logout()
-                navigate('/login')
+                void logout().then(() => navigate('/login'))
               }}
               className="rounded-xl border-2 border-line px-3 py-1.5 text-sm font-bold hover:border-coral hover:text-coral"
             >

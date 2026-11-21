@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Socket } from 'socket.io-client'
+import { useAuthStore } from '@/features/auth'
 import { connectLive } from '@/shared/live/socket'
 import type { LiveAck } from '../types'
 
@@ -12,7 +13,8 @@ export type ConnectionState = 'connecting' | 'online' | 'reconnecting' | 'refuse
  * itself again (host:attach / player:join / player:rejoin, plan L10).
  */
 export function useLiveSocket(
-  token: string | null,
+  /** Logged-in user id, or null for a guest. Not the token: it changes every 15 min. */
+  userId: string | null,
   handlers: {
     onConnect: (socket: Socket) => void
     /** Server events: room:state, host:state, player:kicked… */
@@ -29,7 +31,7 @@ export function useLiveSocket(
   })
 
   useEffect(() => {
-    const socket = connectLive(token)
+    const socket = connectLive(userId ? () => useAuthStore.getState().freshToken() : null)
     socketRef.current = socket
     socket.on('connect', () => {
       setConnection('online')
@@ -54,7 +56,7 @@ export function useLiveSocket(
       socket.disconnect()
       socketRef.current = null
     }
-  }, [token])
+  }, [userId])
 
   /** Sends an event and waits for the server's acknowledgement (10 s). */
   async function emit<T extends object = object>(event: string, payload: object = {}): Promise<LiveAck<T>> {

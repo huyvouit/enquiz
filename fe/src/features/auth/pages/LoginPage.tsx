@@ -11,6 +11,8 @@ export function LoginPage() {
   const location = useLocation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  // Off by default: many pupils share the school's tablets (plan D22).
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -19,7 +21,7 @@ export function LoginPage() {
     setError(null)
     setLoading(true)
     try {
-      const user = await login({ username, password })
+      const user = await login({ username, password, remember })
       const from = (location.state as { from?: string } | null)?.from
       navigate(from ?? homePathFor(user), { replace: true })
     } catch (err) {
@@ -50,6 +52,18 @@ export function LoginPage() {
             required
           />
         </Field>
+        <label className="flex cursor-pointer items-start gap-2 text-sm font-semibold text-ink-soft">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4 accent-brand"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          <span>
+            Ghi nhớ đăng nhập trên máy này
+            <span className="block font-normal">Không chọn nếu đây là máy dùng chung của lớp</span>
+          </span>
+        </label>
         {error ? <ErrorBox message={error} /> : null}
         <Button type="submit" size="lg" loading={loading}>
           Vào học thôi! 🚀

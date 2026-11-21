@@ -1,9 +1,11 @@
-import axios, { AxiosError } from 'axios'
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
 /**
  * Single axios instance for the whole app.
- * - Attaches the JWT (token getter is wired in app/bootstrap.ts so `shared/`
- *   never imports from a feature).
+ * - Attaches the access token (token getter is wired in app/bootstrap.ts so
+ *   `shared/` never imports from a feature).
+ * - On a 401, renews the access token from the session cookie once and
+ *   retries (plan D22); only a failed renewal logs the user out.
  * - Unwraps the backend envelope `{ success, data }` so callers get `data`.
  * - Converts every failure into an `ApiError` with a displayable message.
  */
@@ -26,15 +28,24 @@ export class ApiError extends Error {
 }
 
 let getToken: () => string | null = () => null
+let renewToken: () => Promise<string | null> = async () => null
 let onUnauthorized: () => void = () => {}
 
 export function configureHttp(options: {
   getToken: () => string | null
+  /** New access token from the session cookie; null = the session is over. */
+  renewToken: () => Promise<string | null>
   onUnauthorized: () => void
 }) {
   getToken = options.getToken
+  renewToken = options.renewToken
   onUnauthorized = options.onUnauthorized
 }
+
+/** These answer 401 for a wrong password or a dead session: never retried. */
+const NO_RETRY = /\/auth\/(login|register|refresh|logout)$/
+
+type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }
 
 http.interceptors.request.use((config) => {
   const token = getToken()
@@ -66,8 +77,28 @@ http.interceptors.response.use(
         error.response.data = {}
       }
     }
-    // A 401 on an authenticated request means the token expired or is invalid.
-    if (status === 401 && getToken()) onUnauthorized()
+    // A 401 on an authenticated request: the 15-minute access token expired,
+    // or the session was revoked. Renew once, then give up.
+    const config = error.config as RetriableConfig | undefined
+    if (status === 401 && config && getToken() && !NO_RETRY.test(config.url ?? '')) {
+      if (config._retried) {
+        onUnauthorized() // refused again with a fresh token: revoked
+      } else {
+        config._retried = true
+        let token: string | null | undefined
+        try {
+          token = await renewToken()
+        } catch {
+          // Network trouble while renewing: report the original error, stay logged in.
+          token = undefined
+        }
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+          return http(config)
+        }
+        if (token === null) onUnauthorized()
+      }
+    }
 
     const message =
       error.response?.data?.message ??

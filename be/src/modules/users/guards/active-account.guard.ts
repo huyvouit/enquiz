@@ -10,10 +10,15 @@ import { ALLOW_PENDING_KEY } from '../../../common/decorators/allow-pending.deco
 import { AccountStatus } from '../../../common/enums/account-status.enum.js';
 import type { AuthUser } from '../../../common/types/auth-user.js';
 import { AccountStatusService } from '../account-status.service.js';
+import {
+  AuthSessionService,
+  SESSION_EXPIRED,
+} from '../sessions/auth-session.service.js';
 
 /**
  * Registered globally after JwtAuthGuard:
  * - disabled or deleted account -> 401 (the token is no longer honoured)
+ * - token of a session that was logged out or revoked -> 401 (plan D22)
  * - pending account -> 403 except on endpoints marked @AllowPending()
  */
 @Injectable()
@@ -21,6 +26,7 @@ export class ActiveAccountGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly statuses: AccountStatusService,
+    private readonly sessions: AuthSessionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -42,6 +48,10 @@ export class ActiveAccountGuard implements CanActivate {
       throw new UnauthorizedException(
         'Mật khẩu vừa được đổi. Vui lòng đăng nhập lại',
       );
+    }
+    // Also refuses tokens issued before sessions existed (no `sid`).
+    if (!(await this.sessions.isActive(user.sessionId))) {
+      throw new UnauthorizedException(SESSION_EXPIRED);
     }
     if (status === AccountStatus.PENDING) {
       const allowed = this.reflector.getAllAndOverride<boolean>(

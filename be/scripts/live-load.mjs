@@ -16,6 +16,7 @@
  * Prints, per question, how far apart the devices received the question and
  * the reveal (spread = last − first arrival), and the answer round trip.
  */
+import { createHash } from 'node:crypto';
 import { io } from 'socket.io-client';
 
 const args = Object.fromEntries(
@@ -42,8 +43,14 @@ async function call(method, path, token, body) {
   if (!json.success) throw new Error(`${method} ${path}: ${json.message}`);
   return json.data;
 }
+// The API takes the client hash of the password, never the password (src/common/utils/passwords.ts).
+const pw = (username, password) =>
+  createHash('sha256')
+    .update(`enquiz-pw-v1:${username.trim().toLowerCase()}:${password}`.normalize('NFC'))
+    .digest('hex');
 const login = async (username, password) =>
-  (await call('POST', '/auth/login', null, { username, password })).accessToken;
+  (await call('POST', '/auth/login', null, { username, password: pw(username, password) }))
+    .accessToken;
 const stats = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
   const at = (p) => s[Math.min(s.length - 1, Math.floor(p * s.length))];

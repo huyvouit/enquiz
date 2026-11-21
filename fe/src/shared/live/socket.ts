@@ -9,14 +9,22 @@ import { io, type Socket } from 'socket.io-client'
 export const LIVE_URL = String(import.meta.env.VITE_LIVE_URL ?? '').replace(/\/$/, '')
 
 /**
- * Opens the `/live` namespace. The JWT goes in the handshake (`auth.token`),
- * checked once by the server; null = anonymous (guest, plan 5.3).
+ * Opens the `/live` namespace. The access token goes in the handshake
+ * (`auth.token`), checked once by the server; no getter = anonymous (guest,
+ * plan 5.3). The getter runs on every (re)connection, so a reconnect after
+ * the 15-minute token expired sends a fresh one (plan D22).
  * WebSocket first; long-polling only when a school network blocks it.
  * Refusals arrive as `connect_error` with message `unauthorized` | `pending`.
  */
-export function connectLive(token: string | null): Socket {
+export function connectLive(getToken: (() => Promise<string | null>) | null): Socket {
   return io(`${LIVE_URL}/live`, {
-    auth: token ? { token } : {},
+    auth: (cb) => {
+      if (!getToken) return cb({})
+      getToken().then(
+        (token) => cb(token ? { token } : {}),
+        () => cb({}),
+      )
+    },
     transports: ['websocket', 'polling'],
     tryAllTransports: true,
     reconnectionDelay: 1_000,

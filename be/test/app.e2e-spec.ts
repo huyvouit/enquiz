@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { tmpdir } from 'node:os';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
+import { pw } from './auth-helpers.js';
 
 // Must be set before AppModule is imported (ConfigModule validates on import).
 process.env.MONGODB_URI = 'memory';
@@ -66,7 +67,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
         .post(`${API}/auth/register`)
         .send({
           username: 'CoHoa',
-          password: 'secret123',
+          password: pw('CoHoa', 'secret123'),
           fullName: 'Cô Hoa',
           role: 'teacher',
         })
@@ -83,7 +84,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
         .post(`${API}/auth/register`)
         .send({
           username: 'be_minh',
-          password: 'secret123',
+          password: pw('be_minh', 'secret123'),
           fullName: 'Bé Minh',
           role: 'student',
           gradeLevel: 5,
@@ -100,7 +101,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
         .post(`${API}/auth/register`)
         .send({
           username: 'be_lan',
-          password: 'secret123',
+          password: pw('be_lan', 'secret123'),
           fullName: 'Bé Lan',
           role: 'student',
           gradeLevel: 5,
@@ -114,7 +115,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
         .post(`${API}/auth/register`)
         .send({
           username: 'hacker',
-          password: 'secret123',
+          password: pw('hacker', 'secret123'),
           fullName: 'X',
           role: 'admin',
         })
@@ -123,7 +124,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
         .post(`${API}/auth/register`)
         .send({
           username: 'cohoa',
-          password: 'secret123',
+          password: pw('cohoa', 'secret123'),
           fullName: 'X',
           role: 'teacher',
         })
@@ -133,7 +134,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
         .post(`${API}/auth/register`)
         .send({
           username: 'nograde',
-          password: 'secret123',
+          password: pw('nograde', 'secret123'),
           fullName: 'X',
           role: 'student',
         })
@@ -143,11 +144,11 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
     it('logs in, rejects bad passwords, protects routes', async () => {
       await http
         .post(`${API}/auth/login`)
-        .send({ username: 'cohoa', password: 'secret123' })
+        .send({ username: 'cohoa', password: pw('cohoa', 'secret123') })
         .expect(200);
       await http
         .post(`${API}/auth/login`)
-        .send({ username: 'cohoa', password: 'wrong' })
+        .send({ username: 'cohoa', password: pw('cohoa', 'wrong') })
         .expect(401);
       await http.get(`${API}/users/profile`).expect(401);
       const me = await http
@@ -172,7 +173,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
       adminToken = (
         await http
           .post(`${API}/auth/login`)
-          .send({ username: 'admin', password: 'admin123' })
+          .send({ username: 'admin', password: pw('admin', 'admin123') })
           .expect(200)
       ).body.data.accessToken;
       const pending = await http
@@ -195,7 +196,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
     it('seeds demo accounts when SEED_DEMO_DATA=true', async () => {
       const res = await http
         .post(`${API}/auth/login`)
-        .send({ username: 'student', password: 'student123' })
+        .send({ username: 'student', password: pw('student', 'student123') })
         .expect(200);
       expect(res.body.data.user.role).toBe('student');
     });

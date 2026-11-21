@@ -47,7 +47,7 @@ type JoinAck = LiveAck<{ playerId: string; rejoinToken?: string; state: LivePlay
  * a guest with the stored rejoinToken (L10), falling back to a fresh join.
  */
 export function usePlayerSession(stored: StoredPlayer) {
-  const token = useAuthStore((s) => s.token)
+  const userId = useAuthStore((s) => s.user?.id ?? null)
   const [view, setView] = useState<LivePlayerView | null>(null)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [exit, setExit] = useState<PlayerExit | null>(null)
@@ -63,7 +63,7 @@ export function usePlayerSession(stored: StoredPlayer) {
 
     const current = readStoredPlayer() ?? stored
     let ack: JoinAck | null = null
-    if (!token && current.playerId && current.rejoinToken) {
+    if (!userId && current.playerId && current.rejoinToken) {
       ack = await send('player:rejoin', {
         pin: current.pin,
         playerId: current.playerId,
@@ -87,7 +87,7 @@ export function usePlayerSession(stored: StoredPlayer) {
     })
   }
 
-  const live = useLiveSocket(token, {
+  const live = useLiveSocket(userId, {
     onConnect: (socket) => void attach(socket),
     events: {
       'room:state': (state: LivePlayerView) => setView(state),

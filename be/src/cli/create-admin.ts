@@ -12,13 +12,12 @@
 import './cli-env.js';
 import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
-import bcrypt from 'bcryptjs';
 import type { Model } from 'mongoose';
 import { randomBytes } from 'node:crypto';
 import { AppModule } from '../app.module.js';
 import { AccountStatus } from '../common/enums/account-status.enum.js';
 import { Role } from '../common/enums/role.enum.js';
-import { BCRYPT_ROUNDS } from '../common/utils/passwords.js';
+import { hashPlainForStorage } from '../common/utils/passwords.js';
 import { User } from '../modules/users/schemas/user.schema.js';
 
 /** Same rule as sign-up (RegisterDto). */
@@ -63,7 +62,7 @@ async function main() {
     await userModel.create({
       username,
       fullName: fullName.trim(),
-      password: await bcrypt.hash(password, BCRYPT_ROUNDS),
+      password: await hashPlainForStorage(username, password),
       role: Role.ADMIN,
       status: AccountStatus.ACTIVE,
     });

@@ -1,14 +1,12 @@
 import { Command } from '@nestjs/cqrs';
-import type { AuthResult } from '../../auth.types.js';
+import type { SessionOptions, SessionResult } from '../../auth.types.js';
 
-/**
- * Login does not change state, but it is modelled as a command because it is
- * an action with side effects in the future (last-login, audit, lockout).
- */
-export class LoginCommand extends Command<AuthResult> {
+/** Checks the password and opens a login session (plan D22). */
+export class LoginCommand extends Command<SessionResult> {
   constructor(
     public readonly username: string,
     public readonly password: string,
+    public readonly session: SessionOptions,
   ) {
     super();
   }

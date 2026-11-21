@@ -107,6 +107,13 @@ Tài liệu này ghép:
 - **Ép cập nhật (`forceUpdate`):** `/api/v1/health` trả thêm `minClientVersion`. Frontend thấy phiên bản của mình nhỏ hơn thì tải lại ngay khi không ở phòng thi hoặc trận đấu; nếu đang thi thì đợi nộp bài. Dùng khi API đổi không tương thích.
 - Giữ cơ chế B1 (thiếu file trang sau deploy → tải lại một lần) làm lưới an toàn.
 
+### D26. Hash mật khẩu trong trình duyệt (6.1) – **đã chốt** (chủ dự án yêu cầu, 2026-11-21)
+- Mật khẩu không rời trình duyệt ở dạng rõ: app gửi `SHA-256("enquiz-pw-v1:" + username viết thường + ":" + mật khẩu)` (hex, chuẩn hoá Unicode NFC). Server lưu `bcrypt` của chuỗi đó. Username vẫn gửi dạng rõ (cần để tìm tài khoản và giới hạn số lần thử).
+- **Bảo vệ được:** người đọc được traffic đã giải mã (proxy kiểm tra HTTPS của trường, log lỗi) không thấy mật khẩu gốc, nên không dùng lại được ở trang khác. **Không bảo vệ:** chuỗi hash vẫn đăng nhập được EnQuiz, nên vẫn phải giữ bí mật như mật khẩu; HTTPS vẫn là lớp bảo vệ chính.
+- Quy tắc độ dài (6, admin 12) chỉ kiểm tra ở frontend. Server vẫn từ chối mật khẩu trùng username (đúng chữ thường) và trùng mật khẩu hiện tại.
+- Mật khẩu do server tạo (mật khẩu tạm, seed, `create:admin`, `set:password`) được server tự hash theo cùng công thức trước khi bcrypt.
+- **Chuyển đổi:** không chuyển dần được, vì server chỉ có `bcrypt(mật khẩu gốc)` và từ nay không còn nhận mật khẩu gốc. Tài khoản có từ trước phải đặt lại mật khẩu một lần (`npm run set:password`; học sinh: giáo viên đặt lại trong app). Production lúc này có 4 tài khoản.
+
 ## 4. Thiết kế kỹ thuật
 
 ### Backend
@@ -223,3 +230,32 @@ Thứ tự (đã chốt): **6.5 → 6.1 → 6.3 → 6.4 → 6.2**; 4.3 vẫn t�
 - Kênh xem trước của Firebase vẫn gọi API của bản đang chạy (rewrite `/api` trỏ vào traffic chính của Cloud Run), nên API mới thử qua URL của revision. Đã ghi vào quy trình; với thay đổi API không tương thích sẽ cần `minClientVersion` (6.4).
 - Bản production trước `v1.0.0` không có tag: rollback về nó bằng tên revision (ghi trong `deploy.md`).
 
+
+### Kết quả 6.1
+
+> Ngày: 2026-11-21 · Nhánh `feat/6.1-sessions` (chưa commit) · Trạng thái: **code xong**, chưa phát hành (dự kiến `v1.1.0`; `v1.0.0` vẫn chờ chủ dự án đồng ý `promote`)
+
+**Đã làm**
+
+| Việc | Chi tiết | File chính |
+| --- | --- | --- |
+| Phiên đăng nhập | Collection `auth_sessions` (một tài liệu = một phiên = một "họ" token; `_id` là `sid`): chỉ lưu SHA-256 của refresh token, `prevHash` để nhận ra token cũ bị dùng lại, TTL index trên `expiresAt`, `maxExpiresAt` cho mức trần 14 ngày | `users/sessions/auth-session.{schema,service}.ts` |
+| Xoay vòng, thu hồi | Mỗi lần refresh đổi token (cập nhật có điều kiện theo hash cũ: hai request cùng lúc chỉ một thắng). Token cũ quay lại **sau 30 giây** → thu hồi cả phiên; trong 30 giây → chỉ từ chối (hai tab, mất response) | `auth-session.service.ts` |
+| Endpoint | `POST /auth/refresh`, `/auth/logout` (đọc cookie, không cần access token), `/auth/logout-all`; đăng nhập/đăng ký đặt cookie; `remember` trong `LoginDto` | `session.controller.ts`, `auth.controller.ts` |
+| Cookie, CSRF | `__session`, HttpOnly, Secure, SameSite=Strict, `Path=/api/v1/auth`; không có `remember` thì là cookie phiên. Refresh/logout đòi `Origin` thuộc `CORS_ORIGIN`/`LIVE_CORS_ORIGINS` hoặc kênh xem trước `https://<site>--<kênh>.web.app` (thiếu `Origin` thì cần `Sec-Fetch-Site: same-origin`). `Cache-Control: private, no-store` | `session-cookie.ts` |
+| Kiểm tra mỗi request | Access token mang `sid`; `ActiveAccountGuard` và socket Đấu trường từ chối khi phiên đã thu hồi (cache 30 giây, xoá ngay khi thu hồi). Token không có `sid` (JWT 7 ngày cũ) bị từ chối | `active-account.guard.ts`, `live-auth.ts` |
+| Thu hồi theo sự kiện | Đổi mật khẩu: thu hồi mọi phiên **trừ máy đang đổi**. Giáo viên/admin đặt lại mật khẩu, khoá tài khoản: thu hồi mọi phiên | `change-password.handler.ts`, `reset-password.handler.ts`, `set-user-status.handler.ts` |
+| Hash mật khẩu (D26) | `passwordHash` ở trình duyệt, `clientPasswordHash` ở server (cùng công thức, chung test vector); DTO chỉ nhận chuỗi hex 64 ký tự (khác → "Ứng dụng đã cũ…"); CLI `set:password` | `shared/lib/password-hash.ts`, `common/utils/passwords.ts`, `cli/set-password.ts` |
+| Frontend | Store bỏ `persist`, token chỉ trong RAM, xoá khoá `enquiz-auth` cũ; mở app gọi refresh một lần (màn chờ 🦉); 401 → refresh **một lần** rồi gửi lại (gom request đồng thời, khoá `navigator.locks` giữa các tab); socket lấy token còn hạn ≥ 1 phút mỗi lần (nối lại), không nối lại khi token đổi | `auth.store.ts`, `http.ts`, `socket.ts`, `useLiveSocket.ts` |
+| Giao diện | Ô "Ghi nhớ đăng nhập trên máy này" (mặc định tắt, ghi chú máy dùng chung); thẻ "Đăng xuất mọi thiết bị" ở trang Đổi mật khẩu; frontend kiểm tra độ dài và "không trùng tên đăng nhập" | `LoginPage.tsx`, `ChangePasswordPage.tsx` |
+
+**Kết quả kiểm tra**
+- Backend: lint sạch; **134 unit** (thêm `readCookie`, `originAllowed`, `parseDuration`, test vector của hash), **112 e2e** (thêm `sessions.e2e-spec.ts`, 15 test: thuộc tính cookie có/không ghi nhớ, mức trần 14 ngày, xoay vòng, dùng lại token cũ, Origin lạ/thiếu/kênh xem trước, token hết hạn → refresh, giáo viên chờ duyệt refresh được, đăng xuất có hiệu lực ngay cả với socket, đăng xuất mọi thiết bị, đổi mật khẩu giữ phiên này, đặt lại/khoá thu hồi phiên, token không `sid` bị từ chối). Test cũ chuyển sang gửi hash; thêm test "mật khẩu rõ bị từ chối".
+- Frontend: `tsc`, lint, build sạch. Hàm hash cho đúng test vector của backend (kể cả mật khẩu tiếng Việt gõ dạng NFD).
+- Chạy thật trên trình duyệt (backend `JWT_EXPIRES_IN=20s`), 16 bước đều đúng, không lỗi console: body đăng nhập chỉ có hash; cookie đúng thuộc tính, `localStorage` không có token; F5 vẫn đăng nhập; token hết hạn → tự refresh, không bị đăng xuất; ghi nhớ = cookie 7 ngày; đăng xuất xoá cookie, máy khác không ảnh hưởng; đổi mật khẩu → máy khác về `/login`, máy này vẫn vào; đăng xuất mọi thiết bị.
+- **Chưa kiểm tra:** cookie `__session` đi qua Firebase Hosting tới Cloud Run (làm ở bước kiểm tra của `release.sh prepare`); socket Đấu trường nối lại sau khi token hết hạn trên trình duyệt thật (đã có e2e phía server).
+
+**Phát hiện trong lúc làm**
+- Yêu cầu hash mật khẩu đến giữa mốc: không chuyển dần được tài khoản cũ (D26), nên phát hành `v1.1.0` phải kèm bước `set:password` cho 4 tài khoản production.
+- Kênh xem trước của Firebase gọi API của bản đang chạy, nên 6.1 chỉ thử trọn vẹn được sau `promote` hoặc khi kênh xem trước trỏ vào revision có tag. Đề xuất thử trường `tag` trong rewrite Cloud Run của Firebase cho kênh xem trước khi chuẩn bị `v1.1.0`.
+- Truy vấn Mongoose theo `userId` dạng chuỗi trong test không tự đổi sang ObjectId: code luôn ép kiểu rõ ràng.
