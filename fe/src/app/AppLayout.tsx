@@ -70,7 +70,15 @@ export function AppLayout() {
                 🏅 Cấp {user.studentProfile.level} · ⚡ {user.studentProfile.xp} XP
               </span>
             ) : null}
-            <span className="hidden font-bold md:inline">{user.fullName}</span>
+            <NavLink
+              to="/account/password"
+              title="Đổi mật khẩu"
+              className="flex items-center gap-1.5 rounded-xl px-2 py-1.5 font-bold text-ink-soft hover:text-ink"
+            >
+              <span aria-hidden>🔑</span>
+              <span className="hidden md:inline">{user.fullName}</span>
+              <span className="sr-only md:hidden">Đổi mật khẩu</span>
+            </NavLink>
             <button
               type="button"
               onClick={() => {
