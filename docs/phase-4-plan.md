@@ -89,6 +89,14 @@ Quyết định chung đánh số tiếp từ Giai đoạn 3 (D12…). Quyết �
 - Lý do: `S3Disk` với Cloud Storage cần khoá HMAC của tài khoản dịch vụ, mà tổ chức Google Cloud mới mặc định chặn tạo khoá (`iam.disableServiceAccountKeyCreation`). `GcsDisk` đăng nhập bằng danh tính của Cloud Run (tài khoản `enquiz-api`), nên không có khoá nào để lộ.
 - `local` và `s3` giữ nguyên cho dev và nhà cung cấp khác.
 
+### D20. Đổi mật khẩu – **đã chốt** (2026-11-21, trước khi có người dùng thật)
+- Mọi vai trò tự đổi mật khẩu: `POST /auth/change-password` với mật khẩu hiện tại và mật khẩu mới. Admin ít nhất 12 ký tự (như `create:admin`), các vai trò khác ít nhất 6 (như đăng ký). Mật khẩu mới phải khác mật khẩu cũ và khác username.
+- Sai mật khẩu hiện tại trả **400**, không trả 401: frontend coi 401 là phiên hết hạn và đăng xuất ngay.
+- Giới hạn 10 lần/phút/tài khoản (`@RateLimit`), để token bị lộ không dùng để dò mật khẩu.
+- **Đăng xuất các phiên cũ:** user có thêm `passwordChangedAt`. Token cấp trước thời điểm này bị từ chối, cả HTTP (`ActiveAccountGuard`) lẫn socket Đấu trường. Thời điểm này được đọc cùng trạng thái tài khoản, cache 30 giây và xoá cache ngay khi đổi. Thiết bị vừa đổi nhận token mới nên vẫn đăng nhập.
+- Áp dụng cả khi admin hoặc giáo viên **đặt lại** mật khẩu cho người khác: phiên cũ của người đó kết thúc.
+- Frontend: trang "Đổi mật khẩu", có link trên thanh menu.
+
 ### Exam Mode (E1–E13) – **đã chốt** (rà soát lại ngày 2026-11-20)
 
 Áp dụng cho bài tập do giáo viên chọn chế độ `exam`. Challenge ngẫu nhiên thuộc giai đoạn sau. **Bản đồ trạm giữ nguyên logic hiện tại.** Thiết kế chi tiết: [tài liệu 14](features/14-exam-mode.md).
@@ -369,6 +377,24 @@ Dữ liệu thử tạo ra khi kiểm tra (lớp, 182 tài khoản thử, bài l
 - Phần C của [launch-checklist.md](launch-checklist.md): backup Atlas, Error Reporting và uptime check, thử rollback, Lighthouse.
 - Đặt lại mật khẩu `teacher`/`student` (đang trùng tài khoản demo trong repo) trước khi có học sinh thật; thêm chức năng "Đổi mật khẩu".
 - Sentry; đồng ý của phụ huynh trước khi mở cho trường thật.
+
+### Kết quả đổi mật khẩu (D20)
+
+> Ngày: 2026-11-21 · Nhánh `feat/4.0-change-password` (chưa commit) · Trạng thái: **code xong**, chưa deploy
+
+**Đã làm**
+
+| Phần | Việc | File chính |
+| --- | --- | --- |
+| Backend | `POST /auth/change-password`: kiểm tra mật khẩu hiện tại, độ dài theo vai trò, khác mật khẩu cũ và username; trả token mới; giới hạn 10 lần/phút | `auth/password.controller.ts`, `auth/commands/*/change-password.*`, `auth/dto/change-password.dto.ts` |
+| Backend | `users.passwordChangedAt`; `AccountStatusService` đọc kèm trạng thái; token cũ bị từ chối ở HTTP và socket Đấu trường | `account-status.service.ts`, `active-account.guard.ts`, `live-auth.ts`, `jwt.strategy.ts` |
+| Backend | Cấp mật khẩu tạm (admin, giáo viên) cũng đăng xuất các phiên cũ | `reset-password.handler.ts` |
+| Frontend | Trang "Đổi mật khẩu" (hiện mật khẩu, kiểm tra trước khi gửi, thông báo xong); link 🔑 trên thanh menu cho mọi vai trò | `ChangePasswordPage.tsx`, `auth.store.ts`, `AppLayout.tsx`, `router.tsx` |
+
+**Kết quả kiểm tra**
+- Backend: lint, prettier sạch; **121 unit** test pass (5 mới cho thời điểm token); **97 e2e** test pass (8 mới trong `test/password.e2e-spec.ts`). Kiểm tra ngược: bỏ phần so thời điểm token ở guard và socket thì 3 test đăng xuất phiên cũ báo lỗi.
+- Frontend: `tsc`, lint, build sạch.
+- **Trình duyệt** (DB tạm): hai máy cùng tài khoản giáo viên; sai mật khẩu hiện tại thì báo lỗi và vẫn giữ phiên; đổi xong máy A vẫn đăng nhập, máy B bị đưa về trang đăng nhập ở request kế tiếp; nút 🔑 hiện trên điện thoại của học sinh. Không có lỗi console.
 
 ### Kết quả 4.1
 
