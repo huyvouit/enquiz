@@ -1,6 +1,6 @@
 # Kế hoạch Giai đoạn 5 – Đấu trường trực tuyến (Live Quiz)
 
-> Trạng thái: **Đang triển khai** · Quyết định D19, L1–L12 **đã chốt** (2026-11-21) · 5.0–5.3: **code xong**, chờ thử trên Cloud Run · Lập: 2026-11-20 · Xem [roadmap](roadmap.md) · Tài liệu: [15-live-quiz.md](features/15-live-quiz.md)
+> Trạng thái: **Đang triển khai** · Quyết định D19, L1–L12 **đã chốt** (2026-11-21) · 5.0–5.3: **xong**, đã thử trên Cloud Run thật (2026-11-21) · Lập: 2026-11-20 · Xem [roadmap](roadmap.md) · Tài liệu: [15-live-quiz.md](features/15-live-quiz.md)
 >
 > Giai đoạn 4.3 (UX & thao tác giáo viên) **tạm hoãn**, làm Giai đoạn 5 trước. Phần hạ tầng còn lại của 4.0 (dựng Cloud Run, Firebase, Atlas, Storage theo [deploy.md](deploy.md)) vẫn cần làm, vì WebSocket chỉ kiểm chứng được trên Cloud Run thật (xem mục 7).
 
@@ -62,6 +62,10 @@ Quyết định chung đánh số tiếp từ Giai đoạn 4 (D19…). Quyết �
   - REST vẫn đi qua `/api/**` của Firebase.
 - **Backend:** biến `LIVE_CORS_ORIGINS` gồm domain Firebase và `localhost:5173`.
 - **Chi phí:** 1 instance luôn bật (512 MiB, CPU luôn cấp) tính phí theo giờ. Cần ước tính bằng bảng giá Cloud Run trước khi bật. Phương án tiết kiệm: chỉ bật `min-instances=1` trong giờ học bằng Cloud Scheduler (để sau).
+- *(Đổi sau khi thử trên Cloud Run thật, 2026-11-21)*:
+  - **Mặc định dùng chế độ tiết kiệm** (`--min-instances=0`, CPU chỉ cấp khi có request). WebSocket đang mở là một request nên CPU được cấp suốt trận; phòng 60 học sinh chạy trọn. `--min-instances=1 --no-cpu-throttling` chỉ còn là tuỳ chọn khi lớp chơi thật gặp lỗi.
+  - Thêm **`--concurrency=500`**: mặc định 80 request/máy, mỗi socket tính một request, nên phòng 60 em bị trả 429.
+  - Thêm **`LIVE_TRUST_PROXY=1`**: socket đi thẳng vào Cloud Run (một proxy), còn HTTP qua Firebase (hai proxy, `TRUST_PROXY=2`); dùng chung một biến thì socket giả được IP.
 - **Khi cần nhiều instance:** Redis adapter của Socket.io + chuyển trạng thái phòng sang Redis. Chưa làm ở Giai đoạn 5.
 
 ### Live Quiz (L1–L12)
@@ -310,7 +314,11 @@ index { hostId, endedAt } · { classId, endedAt } · TTL theo endedAt (180 ngày
   - **60 socket** cùng lúc bằng token học sinh: 60/60 kết nối được, transport `websocket`, bắt tay median ~95 ms (p95 ~107 ms), `whoami` median ~19 ms.
   - Token sai bị từ chối `unauthorized`.
   - Qua proxy Vite (`localhost:5173`): 5/5 kết nối được.
-- **Chưa kiểm tra:** chạy trên Cloud Run thật (`deploy.md` mục 6, bước 8): WebSocket qua `*.run.app`, CORS từ domain Firebase, kết nối 60 phút rồi tự nối lại, `clientIp` sau proxy. Theo mục 9, **5.0 chỉ đóng khi đã thử xong việc này**; cần hạ tầng 4.0.
+- **Cloud Run thật** (2026-11-21, chế độ tiết kiệm, từ Việt Nam; `deploy.md` mục 6, bước 8):
+  - 60 socket ẩn danh với origin của site: 60/60, transport `websocket`, bắt tay median ~378 ms, `whoami` median ~82 ms.
+  - Bằng token học sinh: server nhận đúng vai trò và IP thật; gửi `X-Forwarded-For` giả thì vẫn thấy IP thật (`LIVE_TRUST_PROXY=1`).
+  - Trận thật trên trình duyệt ở site production (màn chiếu và điện thoại): không có lỗi console, CSP cho phép `wss://*.run.app`.
+  - **Chưa thử:** giữ kết nối 65 phút để xem Cloud Run cắt ở phút 60 rồi tự nối lại.
 
 **Phát hiện và đã sửa trong lúc làm**
 - Nest chạy cả **guard toàn cục** (`APP_GUARD`) cho sự kiện WebSocket: `JwtAuthGuard` đọc header `authorization` không có trên socket nên văng lỗi, mọi sự kiện đều bị chặn.
@@ -319,8 +327,8 @@ index { hostId, endedAt } · { classId, endedAt } · TTL theo endedAt (180 ngày
 - `deploy.md` cũ ghi "không cần CPU luôn cấp" và `--min-instances=0`: đã đổi theo D19, có ghi chú chi phí.
 
 **Còn lại**
-- Thử trên Cloud Run thật (bước 8 trong `deploy.md`).
-- Thử tải 60 người chơi **trong một phòng**: đã làm ở 5.1 (xem bên dưới).
+- Giữ kết nối 65 phút trên Cloud Run (`live-check.mjs --hold 65`).
+- Thử tải 60 người chơi **trong một phòng**: đã làm ở 5.1 và trên Cloud Run (xem bên dưới).
 
 ### Kết quả 5.1–5.3
 
@@ -353,7 +361,8 @@ index { hostId, endedAt } · { classId, endedAt } · TTL theo endedAt (180 ngày
   - phản hồi khi trả lời median 3 ms;
   - 60/60 máy tới bục vinh quang.
 - **CI trên PR #4:** xanh cả 3 job (backend, frontend, docker).
-- **Chưa kiểm tra:** Cloud Run thật (chung với 5.0). Độ trễ thật qua Wi-Fi trường sẽ lớn hơn số cục bộ.
+- **Cloud Run thật** (2026-11-21, chế độ tiết kiệm, 60 học sinh một phòng, từ Việt Nam): vào phòng median ~327 ms; câu hỏi tới đủ 60 máy sau 86–114 ms (lệch nhau 37–66 ms); nhận câu trả lời median ~72 ms; 60/60 máy tới bục vinh quang. Lần đầu bị Cloud Run trả 429 vì giới hạn 80 request/máy; đã thêm `--concurrency=500`.
+- **Chưa kiểm tra:** Wi-Fi của một trường thật (độ trễ sẽ lớn hơn).
 
 **Phát hiện và đã sửa trong lúc làm**
 - **F5 làm lộ đáp án cho cả lớp:** một em F5 giữa câu thì server coi em đã rời đi; nếu những em còn lại đã trả lời hết, câu hỏi bị công bố ngay. Nay người rớt mạng được chờ 10 giây (quyết định L10 đã ghi lại).
@@ -361,5 +370,5 @@ index { hostId, endedAt } · { classId, endedAt } · TTL theo endedAt (180 ngày
 - **Tên học sinh trong phòng mở:** dùng tên rút gọn như bảng xếp hạng toàn khối (D3), không lộ họ tên đầy đủ cho người ngoài lớp.
 
 **Còn lại**
-- Thử trên Cloud Run: `live-check.mjs` (bước 8 `deploy.md`) và `live-load.mjs` vào một DB thử.
+- Chạy với một lớp thật qua Wi-Fi trường.
 - Xuất báo cáo trận ra Excel; thưởng chuỗi trả lời đúng (hướng mở rộng trong tài liệu 15).

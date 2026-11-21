@@ -1,6 +1,6 @@
 # Kế hoạch Giai đoạn 4 – Lên production, dọn nợ, Exam Mode & UX
 
-> Trạng thái: **Đang triển khai** · 4.0, 4.1: code xong, chờ dựng hạ tầng · 4.2: code xong ([tài liệu 14](features/14-exam-mode.md)), chưa chạy trên môi trường deploy · 4.3: **tạm hoãn** (làm Giai đoạn 5 trước, xem [phase-5-plan.md](phase-5-plan.md)) · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
+> Trạng thái: **Đang triển khai** · 4.0: **hạ tầng đã dựng, production đang chạy** (2026-11-21) · 4.1: xong · 4.2: code xong ([tài liệu 14](features/14-exam-mode.md)), chưa chạy trên môi trường deploy · 4.3: **tạm hoãn** (làm Giai đoạn 5 trước, xem [phase-5-plan.md](phase-5-plan.md)) · Lập: 2026-11-20 · Xem [roadmap](roadmap.md)
 
 Bản nháp lộ trình ban đầu đặt Giai đoạn 4 là "Cải thiện UX/DX, Exam Mode & Dọn nợ nền tảng", còn việc deploy để tận Giai đoạn 6. Khi rà soát, có ba lý do khiến deploy phải lên trước:
 - Đáp án câu nghe đang bị lộ qua `audioText`.
@@ -331,11 +331,44 @@ student_progress           mode ('classic' mặc định), isAutoSubmit
 - Binary MongoDB của test nằm ở `node_modules/.cache`, không phải `~/.cache`. CI đặt `MONGOMS_DOWNLOAD_DIR` cố định để cache đúng chỗ.
 - Fine-grained token GitHub dùng cho `gh` phải có các quyền sau trên repo: **Contents**, **Workflows** (để push `.github/workflows/`), và **Pull requests** (để `gh pr create`), tất cả ở mức Read and write.
 
+### Kết quả dựng hạ tầng 4.0
+
+> Ngày: 2026-11-21 · PR [#5](https://github.com/huyvouit/enquiz/pull/5) (`GcsDisk`), [#6](https://github.com/huyvouit/enquiz/pull/6) (4.0b), [#7](https://github.com/huyvouit/enquiz/pull/7) (sửa lỗi khi deploy) · Trạng thái: **production đang chạy** theo [deploy.md](deploy.md). ID project, tên site, bucket chỉ ghi ở máy người deploy, không có trong repo.
+
+**Đã làm**
+- Atlas (cluster riêng cho production), Cloud Storage (bucket đọc công khai), Secret Manager (JWT, Mongo, khoá Text-to-Speech), Cloud Run (tài khoản chạy riêng, không có khoá dài hạn nào; chế độ tiết kiệm), Firebase Hosting (site riêng).
+- Kho câu hỏi starter (48 câu, 8 trạm lớp 1–5) và 3 tài khoản gốc (admin, giáo viên, học sinh).
+- Cảnh báo ngân sách mức thấp, tự dọn image cũ và file tạm của Cloud Build (`deploy.md`, mục "Giữ chi phí bằng 0").
+
+**Kiểm tra sau deploy** (`deploy.md` mục 6), tất cả **đạt**:
+
+| Bước | Kết quả |
+| --- | --- |
+| 1–2 | `/health` qua Firebase; `clientIp` đúng IP thật sau khi đặt `TRUST_PROXY=2` |
+| 3 | Admin xem danh sách tài khoản; giáo viên bị chặn khỏi API admin (403) |
+| 4 | Upload ảnh lên bucket thật: URL `storage.googleapis.com/<bucket>/images/…`, tải công khai được, cache 1 năm |
+| 5 | Xuất bảng điểm Excel và PDF: tiếng Việt có dấu hiển thị đúng |
+| 6 | Google Text-to-Speech tạo âm thanh 10/10 câu nghe; dữ liệu `/play` không có chữ câu đọc; file mp3 tải công khai được |
+| 7 | 11 lần đăng nhập sai cùng username: 10 lần 401 rồi 429; username khác vẫn đăng nhập được |
+| 8 | Socket Đấu trường và phòng 60 học sinh: xem [Kết quả 5.0 và 5.1–5.3](phase-5-plan.md#kết-quả-50) |
+| 9 | Header bảo mật (CSP, HSTS, X-Frame-Options…), `robots.txt`, `sitemap.xml`, link Open Graph tuyệt đối |
+
+Dữ liệu thử tạo ra khi kiểm tra (lớp, 182 tài khoản thử, bài làm, trận đấu, ảnh) đã xoá sau khi kiểm tra.
+
+**Phát hiện và đã sửa** (PR #5, #7)
+- Tổ chức Google Cloud mới chặn tạo khoá cho tài khoản dịch vụ: `S3Disk` cần khoá HMAC nên không dùng được. Đã thêm `GcsDisk` không dùng khoá (D18).
+- `S3Disk.url()` không thêm thư mục: URL ảnh thiếu `images/`. Đã sửa.
+- `.gcloudignore` loại nhầm `src/modules/uploads/` khỏi Cloud Build.
+- Cloud Build cần vai trò Cloud Build Builder cho tài khoản build mặc định.
+- Chuỗi kết nối Atlas không có tên DB, nên dữ liệu rơi vào DB `test`.
+- `create:admin` và `seed:content` đọc `be/.env` của máy dev và seed dữ liệu demo (có `admin`/`admin123`) vào DB production trống. Đã xoá dữ liệu demo; hai lệnh này nay luôn tắt seed demo.
+- Socket dùng chung `TRUST_PROXY` với HTTP nên giả được IP: thêm `LIVE_TRUST_PROXY`.
+- Cloud Run mặc định 80 request/máy: phòng 60 em bị trả 429. Thêm `--concurrency=500`.
+
 **Còn lại để đóng 4.0**
-- Dựng hạ tầng theo `deploy.md` và chạy hết mục 6 (kiểm tra sau deploy). D18 đã chốt (`GcsDisk`, PR #5).
-- Kiểm tra trước khi launch (4.0b): [launch-checklist.md](launch-checklist.md). Phần code A1–A6, B1–B4 đã làm; phần C làm cùng deploy.
-- Sentry và backup Atlas.
-- Đồng ý của phụ huynh trước khi mở cho trường thật.
+- Phần C của [launch-checklist.md](launch-checklist.md): backup Atlas, Error Reporting và uptime check, thử rollback, Lighthouse.
+- Đặt lại mật khẩu `teacher`/`student` (đang trùng tài khoản demo trong repo) trước khi có học sinh thật; thêm chức năng "Đổi mật khẩu".
+- Sentry; đồng ý của phụ huynh trước khi mở cho trường thật.
 
 ### Kết quả 4.1
 
