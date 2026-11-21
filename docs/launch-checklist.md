@@ -1,6 +1,6 @@
 # Kiểm tra trước khi launch (4.0b)
 
-> Ngày rà soát: 2026-11-21 · Phạm vi: toàn bộ `be/`, `fe/`, cấu hình deploy · Trạng thái: **A1–A6, B1–B4 đã làm** (nhánh `feat/4.0b-launch-hardening`, xem [Kết quả](#kết-quả-a1a6-b1b4)); phần C làm cùng deploy
+> Ngày rà soát: 2026-11-21 · Phạm vi: toàn bộ `be/`, `fe/`, cấu hình deploy · Trạng thái: **A1–A6, B1–B4 đã làm** ([PR #6](https://github.com/huyvouit/enquiz/pull/6) đã merge vào `main` (merge commit `c4e9aa8`), xem [Kết quả](#kết-quả-a1a6-b1b4)); phần C làm cùng deploy
 
 Rà theo 20 mục kiểm tra trước khi đưa một web app viết nhanh (có AI hỗ trợ) lên production. Mỗi mục ghi: hiện trạng, bằng chứng, việc cần làm. Mục **A** là code phải sửa trước khi launch; **B** nên làm trước khi launch; **C** là việc dựng và vận hành, làm cùng deploy.
 
@@ -135,7 +135,7 @@ Repo là **public**: tài liệu này và mọi commit không chứa ID project,
 
 ## Kết quả A1–A6, B1–B4
 
-> Ngày: 2026-11-21 · Nhánh `feat/4.0b-launch-hardening` (chưa commit) · Trạng thái: **code xong**, chờ deploy để chạy bước 9 của `deploy.md` mục 6
+> Ngày: 2026-11-21 · [PR #6](https://github.com/huyvouit/enquiz/pull/6) đã merge vào `main` (merge commit `c4e9aa8`) · Trạng thái: **code xong**, chờ deploy để chạy bước 9 của `deploy.md` mục 6
 
 **Đã làm**
 
@@ -160,6 +160,7 @@ Repo là **public**: tài liệu này và mọi commit không chứa ID project,
   - đăng nhập, bản đồ, màn chơi, 404, kho câu hỏi, soạn câu hỏi, Đấu trường từ phòng chờ tới bục vinh quang (có pháo giấy): không có lỗi console, không có vi phạm CSP;
   - ảnh gốc 8,6 MB được lưu thành WebP 1280 px, 571 KB (ảnh thử là nhiễu ngẫu nhiên, khó nén nhất);
   - giả lập vừa deploy bản mới (file trang bị xoá): tải lại đúng một lần rồi hiện trang báo lỗi.
+- **CI trên PR #6 và trên `main` sau khi merge:** xanh cả 3 job (backend, frontend, docker).
 - **Chưa kiểm tra:** header thật trên Firebase Hosting và xem trước link trên Zalo/Messenger (bước 9 của `deploy.md` mục 6).
 
 **Phát hiện thêm trong lúc làm**
