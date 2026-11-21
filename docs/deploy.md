@@ -271,7 +271,7 @@ Chuẩn bị một lần trên máy phát hành: `cp .env.release.example .env.r
    - Kiểm tra: đúng dạng `VERSION`, có mục CHANGELOG, đang ở `main` và trùng `origin/main`, tag chưa tồn tại.
    - Build image `api:X.Y.Z`; deploy revision **0% traffic** có tag `vX-Y-Z` (đặt `APP_VERSION`, `GIT_COMMIT`); build frontend và deploy vào kênh xem trước `vX-Y-Z` (giữ 30 ngày).
    - Tự kiểm tra `/api/v1/health` của revision và `version.json` của kênh xem trước đúng phiên bản; in hai URL thử.
-   - Site trên kênh xem trước vẫn gọi API của bản **đang chạy** (rewrite của Firebase trỏ vào traffic chính). API mới thử qua URL của revision.
+   - Site trên kênh xem trước gọi API của **revision mới** (`pinTag` trong `firebase.json`; cần `FIREBASE_CLI_EXPERIMENTS=pintags`, script tự đặt): rewrite `/api` của bản này được ghim vào revision mới nhất, tức là revision vừa deploy có tag `vX-Y-Z`. Thử được trọn vẹn cả đăng nhập, cookie `__session` lẫn API mới trước khi promote. *(Từ v1.1.0; trước đó kênh xem trước gọi API của bản đang chạy.)*
 3. **Kiểm tra** trên hai URL thử (đăng nhập, luồng chính của thay đổi).
 4. **Hỏi chủ dự án**, kèm mục CHANGELOG và hai URL thử. Chỉ khi được đồng ý:
    ```bash
@@ -286,7 +286,7 @@ Xem production đang chạy gì: `scripts/release.sh status`. Chạy thử khôn
 ```bash
 scripts/release.sh rollback <X.Y.Z trước đó>
 ```
-Chuyển traffic về revision có tag của phiên bản đó và đưa kênh xem trước của nó lên lại site chính. Kênh xem trước hết hạn sau 30 ngày: khi đó rollback frontend trên Firebase Console → Hosting → Release history. Rollback cũng đổi phiên bản Đấu trường: trận đang diễn ra trên máy cũ vẫn tiếp tục cho tới khi các kết nối đóng.
+Chuyển traffic về revision có tag của phiên bản đó và đưa kênh xem trước của nó lên lại site chính. Kênh xem trước hết hạn sau 30 ngày: khi đó rollback frontend trên Firebase Console → Hosting → Release history. Rollback cũng đổi phiên bản Đấu trường: trận đang diễn ra trên máy cũ vẫn tiếp tục cho tới khi các kết nối đóng. Từ v1.1.0, API của site chính được ghim theo bản Hosting (`pinTag`). Vì vậy đưa bản Hosting cũ lên lại cũng là quay API về revision của bản đó, còn chuyển traffic là để socket Đấu trường (đi thẳng vào Cloud Run) đi theo.
 
 Bản đang chạy trước `v1.0.0` không có tag. Muốn quay về bản đó: `gcloud run services update-traffic enquiz-api --region=$REGION --to-revisions=<revision cũ>=100` và rollback frontend trên Console.
 
