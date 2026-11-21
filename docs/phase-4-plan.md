@@ -375,12 +375,12 @@ Dữ liệu thử tạo ra khi kiểm tra (lớp, 182 tài khoản thử, bài l
 
 **Còn lại để đóng 4.0**
 - Phần C của [launch-checklist.md](launch-checklist.md): backup Atlas, Error Reporting và uptime check, thử rollback, Lighthouse.
-- Đặt lại mật khẩu `teacher`/`student` (đang trùng tài khoản demo trong repo) trước khi có học sinh thật; thêm chức năng "Đổi mật khẩu".
+- Đổi mật khẩu 3 tài khoản gốc trên production (chức năng đã có, D20); `teacher`/`student` đang trùng tài khoản demo trong repo.
 - Sentry; đồng ý của phụ huynh trước khi mở cho trường thật.
 
 ### Kết quả đổi mật khẩu (D20)
 
-> Ngày: 2026-11-21 · Nhánh `feat/4.0-change-password` (chưa commit) · Trạng thái: **code xong**, chưa deploy
+> Ngày: 2026-11-21 · [PR #9](https://github.com/huyvouit/enquiz/pull/9) đã merge vào `main` (merge commit `85ab510`) · Trạng thái: **đã deploy production**
 
 **Đã làm**
 
@@ -394,6 +394,8 @@ Dữ liệu thử tạo ra khi kiểm tra (lớp, 182 tài khoản thử, bài l
 **Kết quả kiểm tra**
 - Backend: lint, prettier sạch; **121 unit** test pass (5 mới cho thời điểm token); **97 e2e** test pass (8 mới trong `test/password.e2e-spec.ts`). Kiểm tra ngược: bỏ phần so thời điểm token ở guard và socket thì 3 test đăng xuất phiên cũ báo lỗi.
 - Frontend: `tsc`, lint, build sạch.
+- **CI trên PR #9 và trên `main`:** xanh cả 3 job (backend, frontend, docker).
+- **Production** (sau deploy): gọi đổi mật khẩu với mật khẩu hiện tại sai → 400 "Mật khẩu hiện tại không đúng", phiên vẫn dùng được; trang `/account/password` tải được. Chưa đổi mật khẩu thật nào: chủ tài khoản tự đổi.
 - **Trình duyệt** (DB tạm): hai máy cùng tài khoản giáo viên; sai mật khẩu hiện tại thì báo lỗi và vẫn giữ phiên; đổi xong máy A vẫn đăng nhập, máy B bị đưa về trang đăng nhập ở request kế tiếp; nút 🔑 hiện trên điện thoại của học sinh. Không có lỗi console.
 
 ### Kết quả 4.1
