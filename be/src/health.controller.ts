@@ -14,6 +14,7 @@ export class HealthController {
    *   deploy, it must match your real public IP; otherwise adjust TRUST_PROXY.
    * - `version`, `commit`: the release this revision runs (plan D21); `dev`
    *   when not deployed by scripts/release.sh.
+   * - `minClientVersion`: older frontends must update (plan D25).
    */
   @Get()
   check(@Req() req: Request) {
@@ -22,6 +23,7 @@ export class HealthController {
       clientIp: req.ip ?? null,
       version: this.config.get('APP_VERSION'),
       commit: this.config.get('GIT_COMMIT'),
+      minClientVersion: this.config.get('MIN_CLIENT_VERSION'),
     };
   }
 }

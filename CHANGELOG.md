@@ -11,11 +11,12 @@ Dự kiến `1.1.0`. Đổi tên mục này thành số phiên bản khi chuẩn
 - **Phiên đăng nhập** (6.1, D22): access token 15 phút chỉ nằm trong RAM, refresh token trong cookie `__session` (HttpOnly, SameSite=Strict), đổi mới mỗi lần dùng; dùng lại token cũ thì thu hồi cả phiên. Ô **"Ghi nhớ đăng nhập trên máy này"** (mặc định tắt: 12 giờ; bật: 7 ngày kể từ lần dùng gần nhất, tối đa 14 ngày). Nút **"Đăng xuất mọi thiết bị"** ở trang Đổi mật khẩu. Đăng xuất, đổi/đặt lại mật khẩu, khoá tài khoản có hiệu lực ngay, cả với socket Đấu trường.
 - **Mật khẩu được hash trong trình duyệt** (D26, theo yêu cầu chủ dự án): API chỉ nhận `SHA-256("enquiz-pw-v1:" + username + ":" + mật khẩu)`; server lưu bcrypt của chuỗi đó. App cũ gửi mật khẩu rõ sẽ nhận thông báo "Ứng dụng đã cũ, vui lòng tải lại trang".
 - **Cài EnQuiz như ứng dụng** (6.3, D24): có manifest và icon, nên "Thêm vào màn hình chính" được trên tablet và điện thoại. Vỏ app mở nhanh từ cache, và mở được cả khi mất mạng; lúc đó hiện thanh "Mất mạng rồi – kết nối lại để học tiếp nhé!". Ảnh và âm thanh câu hỏi được cache (300 file, 30 ngày). API **không** bao giờ được cache.
+- **Thanh "EnQuiz có bản mới – Cập nhật"** (6.4, D25): không hiện trong phòng thi, khi đang chơi quiz hay đang ở trận Đấu trường. `/api/v1/health` trả `minClientVersion`; app cũ hơn tự cập nhật khi rời các màn đó. `release.sh` nhận `MIN_CLIENT_VERSION=x.y.z` lúc `prepare`, và build frontend trong một worktree sạch.
 
 **Khi deploy:**
 - Mọi người phải đăng nhập lại một lần (token 7 ngày cũ không còn hợp lệ).
 - **Tài khoản tạo trước bản này không đăng nhập được** cho tới khi đặt lại mật khẩu (server chưa từng thấy mật khẩu ở dạng đổi được). Ngay sau `promote`, chạy `npm run set:password -- <username>` (trong `be/`, `MONGODB_URI` của production) cho từng tài khoản; học sinh có thể được giáo viên đặt lại mật khẩu trong app.
-- Không có biến môi trường bắt buộc mới (mặc định: `JWT_EXPIRES_IN=15m`, `REFRESH_TTL_SESSION=12h`, `REFRESH_TTL_REMEMBER=7d`, `REFRESH_MAX_REMEMBER=14d`). Collection mới `auth_sessions` tự tạo, có TTL index.
+- Không có biến môi trường bắt buộc mới (mặc định: `JWT_EXPIRES_IN=15m`, `REFRESH_TTL_SESSION=12h`, `REFRESH_TTL_REMEMBER=7d`, `REFRESH_MAX_REMEMBER=14d`, `MIN_CLIENT_VERSION=0.0.0`). Collection mới `auth_sessions` tự tạo, có TTL index.
 - Bật CORS cho bucket ảnh/âm thanh một lần (`deploy.md` mục 2), để service worker cache được file. Thiếu bước này app vẫn chạy, chỉ không cache.
 - CSP thêm `https://storage.googleapis.com` vào `connect-src`, vì service worker tải ảnh/âm thanh bằng `fetch`.
 

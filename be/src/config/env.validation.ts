@@ -54,6 +54,12 @@ export interface AppEnv {
   APP_VERSION: string;
   GIT_COMMIT: string;
   /**
+   * Oldest frontend release the API still works with (plan D25). Older open
+   * apps update themselves (after an exam or match). Raise it only for an
+   * API change that breaks older frontends.
+   */
+  MIN_CLIENT_VERSION: string;
+  /**
    * Where question images and listening audio go: `local` disk, an
    * S3-compatible bucket (`s3`, needs keys) or Cloud Storage signed in as the
    * service account the app runs as (`gcs`, no keys; plan D18).
@@ -110,6 +116,7 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     LIVE_TRUST_PROXY: Number(str('LIVE_TRUST_PROXY', str('TRUST_PROXY', '0'))),
     APP_VERSION: str('APP_VERSION', 'dev'),
     GIT_COMMIT: str('GIT_COMMIT', 'unknown'),
+    MIN_CLIENT_VERSION: str('MIN_CLIENT_VERSION', '0.0.0'),
     STORAGE_DRIVER: str('STORAGE_DRIVER', 'local') as AppEnv['STORAGE_DRIVER'],
     UPLOAD_DIR: str('UPLOAD_DIR', 'uploads'),
     S3_BUCKET: str('S3_BUCKET', ''),
@@ -124,6 +131,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   };
 
   if (Number.isNaN(env.PORT)) errors.push('PORT must be a number');
+  if (!/^\d+\.\d+\.\d+$/.test(env.MIN_CLIENT_VERSION)) {
+    errors.push('MIN_CLIENT_VERSION must look like 1.2.0');
+  }
   if (!['local', 's3', 'gcs'].includes(env.STORAGE_DRIVER)) {
     errors.push('STORAGE_DRIVER must be local, s3 or gcs');
   }

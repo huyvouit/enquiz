@@ -103,7 +103,7 @@ Tài liệu này ghép:
 
 ### D25. Cập nhật phiên bản trên máy người dùng (6.4) – **đã chốt**
 - `registerType: 'prompt'`: có bản mới thì hiện thanh "🎉 EnQuiz có bản mới – Cập nhật". Bấm thì tải lại.
-- **Không làm phiền giữa chừng:** không hiện khi đang ở phòng thi (`/exam/…`) hoặc màn chơi Đấu trường (`/live/play`, màn chiếu); hiện khi rời các trang đó.
+- **Không làm phiền giữa chừng:** không hiện khi đang ở phòng thi (`/exam/…`) hoặc màn chơi Đấu trường (`/live/play`, màn chiếu); hiện khi rời các trang đó. *(Lúc làm: thêm cả màn chơi quiz `/play/…`, vì tải lại giữa chừng thì mất lượt đang làm.)*
 - **Ép cập nhật (`forceUpdate`):** `/api/v1/health` trả thêm `minClientVersion`. Frontend thấy phiên bản của mình nhỏ hơn thì tải lại ngay khi không ở phòng thi hoặc trận đấu; nếu đang thi thì đợi nộp bài. Dùng khi API đổi không tương thích.
 - Giữ cơ chế B1 (thiếu file trang sau deploy → tải lại một lần) làm lưới an toàn.
 
@@ -259,3 +259,36 @@ Thứ tự (đã chốt): **6.5 → 6.1 → 6.3 → 6.4 → 6.2**; 4.3 vẫn t�
 - Yêu cầu hash mật khẩu đến giữa mốc: không chuyển dần được tài khoản cũ (D26), nên phát hành `v1.1.0` phải kèm bước `set:password` cho 4 tài khoản production.
 - Kênh xem trước của Firebase gọi API của bản đang chạy, nên 6.1 chỉ thử trọn vẹn được sau `promote` hoặc khi kênh xem trước trỏ vào revision có tag. Đề xuất thử trường `tag` trong rewrite Cloud Run của Firebase cho kênh xem trước khi chuẩn bị `v1.1.0`.
 - Truy vấn Mongoose theo `userId` dạng chuỗi trong test không tự đổi sang ObjectId: code luôn ép kiểu rõ ràng.
+
+### Kết quả 6.3 và 6.4
+
+> Ngày: 2026-11-21 · Cùng nhánh `feat/6.1-sessions` (chưa commit) · Trạng thái: **code xong**, chưa phát hành (đề xuất gộp với 6.1 thành `v1.1.0`)
+
+**Đã làm**
+
+| Việc | Chi tiết | File chính |
+| --- | --- | --- |
+| Manifest, icon | `vite-plugin-pwa` 2.0.0 (chế độ `injectManifest`): tên, `standalone`, màu thương hiệu, icon 192/512 và icon maskable 512, render từ favicon | `vite.config.ts`, `public/pwa-*.png` |
+| Service worker | Precache vỏ app (47 file, ~1 MB chưa nén; bỏ `og-image.png`). Mọi trang trả `index.html` (trừ `/api`, `/socket.io`, `/version.json`). Ảnh/âm thanh trên Cloud Storage: CacheFirst, 300 file, 30 ngày, `purgeOnQuotaError`, trả byte range từ file đã cache. **API không có route nào**, tức là không bao giờ cache | `fe/sw/sw.ts`, `tsconfig.sw.json` |
+| CORS cho cache ảnh/âm thanh | Service worker xin file ở chế độ CORS và chỉ cache response 200. Bucket chưa bật CORS thì tải lại theo cách thường và không cache, nên không phụ thuộc thứ tự triển khai. `deploy.md` có lệnh bật CORS cho bucket | `sw.ts`, `deploy.md` |
+| Mất mạng | Thanh đỏ "Mất mạng rồi – kết nối lại để học tiếp nhé!", hiện cả trên màn chờ lúc khởi động. Có mạng lại thì tự lấy lại phiên | `OfflineBanner.tsx`, `App.tsx` |
+| Thanh cập nhật (6.4) | `registerType: 'prompt'`. Kiểm tra bản mới mỗi 30 phút và khi quay lại tab. "EnQuiz có bản mới – Cập nhật" → `SKIP_WAITING` → tải lại vào bản mới | `UpdatePrompt.tsx`, `sw.ts` |
+| Không làm phiền | Ẩn trong `/exam/…`, `/play/…`, `/live/play`, màn chiếu `/teacher/live/:id/host`; hiện lại khi rời | `busy-route.ts` |
+| `minClientVersion` | Backend: biến `MIN_CLIENT_VERSION` (mặc định `0.0.0`), trả trong `/health`. Frontend: bản cũ hơn thì hiện "Cần cập nhật EnQuiz để dùng tiếp", rồi tự chuyển khi bản mới đã cài xong và người dùng không ở màn đang làm. Mỗi tab tối đa một lần, nên không lặp | `health.controller.ts`, `UpdatePrompt.tsx` |
+| Hạ tầng | `firebase.json`: `sw.js`, `manifest.webmanifest` dùng `no-cache`; CSP thêm `storage.googleapis.com` vào `connect-src`. `release.sh`: `MIN_CLIENT_VERSION=…` lúc `prepare`; frontend build trong worktree tạm từ `HEAD` (không phụ thuộc `fe/node_modules`); ghi chú PATH cho Windows trong `.env.release.example` | `firebase.json`, `scripts/release.sh` |
+
+**Kết quả kiểm tra**
+- Backend: 134 unit, 112 e2e (test `/health` có `minClientVersion`). Frontend: `tsc` (thêm project `tsconfig.sw.json`), lint, build sạch.
+- Chạy bản build production thật (`vite preview` + backend), trình duyệt Edge không giao diện, không lỗi console:
+  - service worker active; **cài được** (`Page.getInstallabilityErrors` không có lỗi); manifest đủ 3 icon;
+  - Cache Storage chỉ có precache (có `index.html`), **không có response `/api` nào**;
+  - file âm thanh thật trên bucket production (chưa bật CORS) vẫn tải được qua service worker và không bị cache;
+  - tắt mạng rồi tải lại: app vẫn mở, hiện thanh mất mạng; có mạng lại thì thanh biến mất;
+  - đang mở `v1.0.0`, phát hành `v1.0.1`: thanh cập nhật hiện; vào màn chơi quiz thì ẩn, về trang chủ thì hiện lại; bấm Cập nhật → chân trang `v1.0.1`, vẫn đăng nhập;
+  - backend đặt `MIN_CLIENT_VERSION=9.0.0`: hiện "Cần cập nhật EnQuiz"; có bản mới thì app tự chuyển sang mà không cần bấm, rồi không tải lại thêm lần nào.
+- **Chưa kiểm tra:** cài thật lên Android/iPad; cache ảnh/âm thanh khi bucket đã bật CORS (làm lúc phát hành); Lighthouse không còn mục PWA từ bản 12, nên kiểm tra khả năng cài bằng DevTools Protocol.
+
+**Phát hiện trong lúc làm**
+- Bucket không trả header CORS, nên `<img>`/`new Audio()` nhận response opaque. Cache trực tiếp những response này sẽ tốn hàng GB quota trên tablet, vì vậy service worker tự xin file ở chế độ CORS.
+- Lần mở đầu, service worker chưa đăng ký xong mà lệnh ép cập nhật đã chạy và tải lại trang. Đã sửa bằng cách chỉ coi "không có service worker" khi trình duyệt thật sự không hỗ trợ.
+- Các dev server Vite đang chạy giữ khoá file trong `fe/node_modules`, nên `npm ci` thất bại và xoá dở thư mục này. Việc kiểm tra frontend chạy trong worktree sạch, và `release.sh` giờ cũng build ở đó.

@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth'
 import { queryClient } from '@/shared/api/query-client'
 import { OfflineBanner } from './pwa/OfflineBanner'
+import { UpdatePrompt } from './pwa/UpdatePrompt'
 import { router } from './router'
 
 export function App() {
@@ -39,6 +40,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <OfflineBanner />
       <RouterProvider router={router} />
+      <UpdatePrompt />
     </QueryClientProvider>
   )
 }

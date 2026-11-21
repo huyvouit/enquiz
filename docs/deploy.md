@@ -294,6 +294,14 @@ Bản đang chạy trước `v1.0.0` không có tag. Muốn quay về bản đó
 | --- | --- | --- | --- |
 | (trước v1.0.0) | 2026-11-21 | `enquiz-api-00006` | image `85ab510`, deploy bằng tay |
 
+### App cài được (PWA) và cập nhật trên máy người dùng (6.3, 6.4)
+
+- **Service worker** (`fe/sw/sw.ts`) giữ sẵn vỏ app của bản đang dùng. Bản mới được tải ngầm, rồi người dùng thấy thanh **"EnQuiz có bản mới – Cập nhật"**. Thanh này không hiện trong phòng thi, khi đang chơi quiz hay đang ở trận Đấu trường. Vì vậy sau `promote`, các máy đang mở vẫn chạy bản cũ tới khi người dùng bấm Cập nhật hoặc mở lại app.
+- **Ép cập nhật:** khi API đổi không tương thích với frontend cũ, phát hành bằng `MIN_CLIENT_VERSION=<phiên bản này> scripts/release.sh prepare`. `/api/v1/health` trả `minClientVersion`. App cũ hơn sẽ tự cập nhật ngay khi người dùng rời bài thi, quiz hoặc trận đấu, mỗi tab tối đa một lần. Không đặt biến này thì giữ giá trị hiện có của service (mặc định `0.0.0`).
+- **Không cache API:** service worker không chặn `/api` hay socket. Kiểm tra: DevTools → Application → Cache Storage chỉ có `workbox-precache-…` và `enquiz-media`.
+- **`sw.js`, `manifest.webmanifest`** có `Cache-Control: no-cache` (`firebase.json`), để máy người dùng thấy bản mới ngay.
+- **Lối thoát khi service worker lỗi** (ví dụ ai cũng kẹt ở bản hỏng): phát hành một bản PATCH có `selfDestroying: true` trong `VitePWA({...})` (`fe/vite.config.ts`). Bản này gỡ service worker và xoá cache trên mọi máy ở lần mở tiếp theo. Sửa xong lỗi thì phát hành bản tiếp theo bỏ cờ này đi.
+
 ## Vận hành: backup, theo dõi lỗi, kiểm tra sống
 
 ### Backup DB (Atlas M0 không có backup tự động)

@@ -10,6 +10,7 @@
 # The version comes from the VERSION file at the repo root (SemVer). Real
 # project values come from .env.release (gitignored; see .env.release.example).
 # DRY_RUN=1 prints the cloud commands instead of running them.
+# MIN_CLIENT_VERSION=x.y.z (prepare) forces older open apps to update (D25).
 set -euo pipefail
 
 ROOT=$(git rev-parse --show-toplevel)
@@ -74,9 +75,16 @@ prepare() {
 
   say "Backend: image $VERSION, revision tag $RTAG, no traffic"
   run gcloud builds submit be --tag "$IMAGE" --region="$REGION"
+  # MIN_CLIENT_VERSION=x.y.z scripts/release.sh prepare: older open apps must
+  # update (plan D25). Unset = keep the service's current value.
+  local env_vars="APP_VERSION=$VERSION,GIT_COMMIT=$COMMIT"
+  if [ -n "${MIN_CLIENT_VERSION:-}" ]; then
+    [[ "$MIN_CLIENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "MIN_CLIENT_VERSION '$MIN_CLIENT_VERSION' is not MAJOR.MINOR.PATCH"
+    env_vars="$env_vars,MIN_CLIENT_VERSION=$MIN_CLIENT_VERSION"
+  fi
   run gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" \
     --no-traffic --tag="$RTAG" \
-    --update-env-vars="APP_VERSION=$VERSION,GIT_COMMIT=$COMMIT"
+    --update-env-vars="$env_vars"
 
   local run_url api_url
   run_url=$(service_json | json_field status.url)
@@ -85,8 +93,22 @@ prepare() {
   [ -n "$DRY_RUN" ] || check_version "$api_url/api/v1/health" "$VERSION" data.version
 
   say "Frontend: preview channel $RTAG"
+  # Built from a clean checkout of HEAD in a temporary worktree: independent of
+  # the local fe/node_modules (a running dev server locks files on Windows)
+  # and of uncommitted files.
+  local fe_dir=fe
+  if [ -n "$DRY_RUN" ]; then
+    echo "  [dry-run] git worktree add --detach <tmp> HEAD; build there"
+  else
+    RELEASE_TMP=$(mktemp -d)
+    trap 'git worktree remove --force "$RELEASE_TMP/src" >/dev/null 2>&1 || true' EXIT
+    git worktree add -q --detach "$RELEASE_TMP/src" HEAD
+    # Hosting target names (not committed); deploy needs them.
+    [ -f fe/.firebaserc ] && cp fe/.firebaserc "$RELEASE_TMP/src/fe/"
+    fe_dir="$RELEASE_TMP/src/fe"
+  fi
   (
-    cd fe
+    cd "$fe_dir"
     run npm ci --no-audit --no-fund
     VITE_LIVE_URL="$run_url" VITE_SITE_URL="$SITE_URL" \
       VITE_APP_VERSION="$VERSION" VITE_GIT_COMMIT="$COMMIT" run npm run build

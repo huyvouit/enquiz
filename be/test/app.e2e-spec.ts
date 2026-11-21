@@ -57,6 +57,7 @@ describe('EnQuiz API — phase 1-2 flow (e2e)', () => {
         clientIp: expect.any(String),
         version: 'dev',
         commit: 'unknown',
+        minClientVersion: '0.0.0',
       },
     });
   });
