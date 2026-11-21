@@ -94,6 +94,9 @@ export function TeacherDashboardPage() {
                   <Button size="sm" variant="secondary" onClick={() => setAssigning(q)}>
                     📬 Giao cho lớp…
                   </Button>
+                  <Button size="sm" variant="secondary" onClick={() => navigate(`/teacher/live/new?quizId=${q.id}`)}>
+                    ⚔️ Đấu trường
+                  </Button>
                   {canModify(q) ? (
                     <>
                       <Button size="sm" variant="secondary" onClick={() => navigate(`/teacher/quizzes/${q.id}/results`)}>

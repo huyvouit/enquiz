@@ -13,6 +13,8 @@ export default defineConfig({
     // so no CORS setup is needed locally.
     proxy: {
       '/api': 'http://localhost:3000',
+      // Live quiz socket (plan 5): WebSocket upgrade forwarded to the API.
+      '/socket.io': { target: 'http://localhost:3000', ws: true },
     },
   },
 })

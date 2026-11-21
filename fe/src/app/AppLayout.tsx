@@ -9,6 +9,7 @@ const NAV: Record<Role, { to: string; label: string }[]> = {
   student: [
     { to: '/home', label: '🗺️ Bản đồ' },
     { to: '/assignments', label: '📬 Bài tập' },
+    { to: '/live', label: '⚔️ Đấu trường' },
     { to: '/leaderboard', label: '🏆 Xếp hạng' },
     { to: '/history', label: '📒 Bài đã làm' },
   ],
@@ -16,6 +17,7 @@ const NAV: Record<Role, { to: string; label: string }[]> = {
     { to: '/teacher/classes', label: '🏫 Lớp học' },
     { to: '/teacher', label: '🧩 Quiz' },
     { to: '/teacher/questions', label: '📚 Kho câu hỏi' },
+    { to: '/teacher/live', label: '⚔️ Đấu trường' },
     { to: '/leaderboard', label: '🏆 Xếp hạng' },
   ],
   admin: [
@@ -24,6 +26,7 @@ const NAV: Record<Role, { to: string; label: string }[]> = {
     { to: '/teacher/classes', label: '🏫 Lớp học' },
     { to: '/teacher', label: '🧩 Quiz' },
     { to: '/teacher/questions', label: '📚 Kho câu hỏi' },
+    { to: '/teacher/live', label: '⚔️ Đấu trường' },
     { to: '/leaderboard', label: '🏆 Xếp hạng' },
   ],
 }

@@ -40,6 +40,8 @@ export function HistoryPage() {
                   {/* Exams never pass a station or earn XP (plan E4). */}
                   {a.mode === 'exam' ? (
                     <Badge tone="sky">📝 Kiểm tra</Badge>
+                  ) : a.mode === 'live' ? (
+                    <Badge tone="sunny">⚔️ Đấu trường</Badge>
                   ) : a.passed ? (
                     <Badge tone="grass">✓ Vượt trạm</Badge>
                   ) : (
