@@ -84,10 +84,10 @@ Quyết định chung đánh số tiếp từ Giai đoạn 3 (D12…). Quyết �
 - **Lý do không dùng transaction:** dev và e2e phải chuyển sang `MongoMemoryReplSet`, trong khi lỗi này hiếm.
 - **Khe còn lại:** nếu server sập đúng giữa hai bước thì vẫn sót tài khoản. Chấp nhận được; dữ liệu Atlas đã là replica set nếu sau này cần transaction.
 
-### D18. Thư viện lưu file – **đề xuất**
-- Thử `@nestjs/storage` với bucket thật ở 4.0.
-  - Chạy được: giữ, ghim phiên bản, theo dõi changelog.
-  - Không chạy được: thay bằng `@google-cloud/storage` đặt sau `StorageService` của dự án, để đổi nhà cung cấp chỉ sửa một chỗ.
+### D18. Thư viện lưu file – **đã chốt** (2026-11-21, khi dựng hạ tầng 4.0)
+- Giữ `@nestjs/storage` (`uploadToDisk`, `serveFile`, kiểm tra chữ ký file), thêm đĩa riêng `GcsDisk` dùng `@google-cloud/storage`: `STORAGE_DRIVER=gcs`.
+- Lý do: `S3Disk` với Cloud Storage cần khoá HMAC của tài khoản dịch vụ, mà tổ chức Google Cloud mới mặc định chặn tạo khoá (`iam.disableServiceAccountKeyCreation`). `GcsDisk` đăng nhập bằng danh tính của Cloud Run (tài khoản `enquiz-api`), nên không có khoá nào để lộ.
+- `local` và `s3` giữ nguyên cho dev và nhà cung cấp khác.
 
 ### Exam Mode (E1–E13) – **đã chốt** (rà soát lại ngày 2026-11-20)
 
@@ -154,9 +154,9 @@ Quyết định chung đánh số tiếp từ Giai đoạn 3 (D12…). Quyết �
 
 Code đã xong; xem [Kết quả 4.0](#kết-quả-40). Phần hạ tầng làm theo [deploy.md](deploy.md):
 1. MongoDB Atlas: tạo user riêng, mở `0.0.0.0/0`, chạy `seed:content`, chạy `create:admin`, lên lịch backup.
-2. Cloud Storage: tạo bucket công khai đọc và HMAC key. Chạy thử upload ảnh để chốt D18.
+2. Cloud Storage: tạo bucket công khai đọc; Cloud Run ghi bằng tài khoản `enquiz-api` (`STORAGE_DRIVER=gcs`, D18). Chạy thử upload ảnh.
 3. Secret Manager và Cloud Run: `max-instances=1`. Chỉnh `TRUST_PROXY` cho tới khi `clientIp` đúng.
-4. Firebase Hosting: commit `.firebaserc`.
+4. Firebase Hosting: `.firebaserc` chứa ID project nên **không commit** (repo public); mỗi máy tự tạo theo `deploy.md` bước 5.
 5. Sentry: lọc tên và đáp án học sinh trước khi gửi.
 6. Đồng ý của phụ huynh (Nghị định 13/2023): **chặn việc mở cho trường thật**, không chặn bản thử nghiệm.
 
@@ -170,7 +170,7 @@ Code xong; xem [Kết quả 4.1](#kết-quả-41).
    - `ListenButton` phát file thay cho Web Speech. Không có file thì hiện "Chưa có âm thanh".
    - Sinh bù cho câu cũ bằng nút của admin (endpoint theo lô), thay cho script chạy từ máy local.
 2. **Tạo học sinh hàng loạt (D17):** thêm bước xoá bù; unit test giả lập lỗi bước cập nhật lớp.
-3. **Thư viện lưu file (D18):** chỉ làm nếu thử ở 4.0 không chạy được.
+3. **Thư viện lưu file (D18):** đã làm ở 4.0 (`GcsDisk`).
 4. **TanStack Query:** chuyển 14 file `useAsync`, rồi xoá `useAsync`.
 
 **Kiểm thử:**
@@ -274,7 +274,7 @@ student_progress           mode ('classic' mặc định), isAutoSubmit
 
 | Rủi ro | Mức | Giảm thiểu |
 | --- | --- | --- |
-| `@nestjs/storage` không chạy với Cloud Storage | Trung bình | Thử ngay ở 4.0; dự phòng D18 |
+| `@nestjs/storage` không chạy với Cloud Storage | Đã xảy ra | Không tạo được khoá HMAC: thêm `GcsDisk` không dùng khoá (D18) |
 | `TRUST_PROXY` đặt sai | Trung bình | Mọi người chung một bộ đếm, hoặc IP bị giả mạo. Kiểm tra `clientIp` sau mỗi lần đổi hạ tầng; giới hạn theo username vẫn chặn dò mật khẩu |
 | Dữ liệu trẻ em trên production | Cao | Không mở cho trường thật trước khi có cơ chế đồng ý của phụ huynh |
 | Khởi động lạnh (`min-instances=0`) làm lần mở đầu chậm vài giây | Thấp | Chấp nhận ở Giai đoạn 4; Giai đoạn 5 đặt `min-instances=1` |
