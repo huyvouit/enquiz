@@ -1,5 +1,5 @@
 import { checkNickname, isRude, uniqueNickname } from './nickname.js';
-import { SlidingWindowLimiter } from './rate-limiter.js';
+import { SlidingWindowLimiter } from '../../common/rate-limit/sliding-window-limiter.js';
 
 describe('guest nicknames (L11)', () => {
   it('accepts Vietnamese names, digits and single spaces', () => {

@@ -7,6 +7,7 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 import { Role } from '../../common/enums/role.enum.js';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
+import { RateLimit } from '../../common/rate-limit/rate-limit.js';
 import type {
   ExportFile,
   ExportFormat,
@@ -114,6 +115,7 @@ export class AnalyticsController {
 
   // ---------- Downloads ----------
 
+  @RateLimit('export', 20)
   @Get('classes/:id/gradebook/export')
   async exportGradebook(
     @Param('id', ParseObjectIdPipe) id: string,
@@ -132,6 +134,7 @@ export class AnalyticsController {
     );
   }
 
+  @RateLimit('export', 20)
   @Get('assignments/:id/export')
   async exportAssignment(
     @Param('id', ParseObjectIdPipe) id: string,
@@ -145,6 +148,7 @@ export class AnalyticsController {
     );
   }
 
+  @RateLimit('export', 20)
   @Get('classes/:id/students/:studentId/export')
   async exportStudentReport(
     @Param('id', ParseObjectIdPipe) id: string,

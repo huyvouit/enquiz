@@ -33,10 +33,19 @@ import { checkNickname, uniqueNickname } from './nickname.js';
 export interface LiveSocketData {
   user: AuthUser | null;
   ip: string;
-  /** PIN of the room this socket shows as host (projector). */
-  hostPin?: string;
+  /** The room this socket shows as host (projector). */
+  host?: RoomBinding;
   /** The player this socket plays as. */
-  player?: { pin: string; playerId: string };
+  player?: RoomBinding & { playerId: string };
+}
+
+/**
+ * A PIN is reused once its room is gone, so a socket remembers the match too
+ * and is only bound while both still match (launch A2).
+ */
+interface RoomBinding {
+  pin: string;
+  matchId: string;
 }
 
 export type LiveSocket = Socket<
@@ -92,9 +101,9 @@ const body = (v: unknown): Record<string, unknown> =>
   typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {};
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest();
-const allRoom = (pin: string) => `room:${pin}`;
-const hostRoom = (pin: string) => `host:${pin}`;
-const playerRoom = (pin: string, id: string) => `player:${pin}:${id}`;
+const allRoom = (matchId: string) => `room:${matchId}`;
+const hostRoom = (matchId: string) => `host:${matchId}`;
+const playerRoom = (matchId: string, id: string) => `player:${matchId}:${id}`;
 
 /**
  * Socket.io side of the live quiz (plan 5, namespace `/live`).
@@ -151,8 +160,8 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
 
   handleDisconnect(socket: LiveSocket): void {
     const player = socket.data.player;
-    if (!player) return;
-    const key = `${player.pin}:${player.playerId}`;
+    if (!player || !this.boundRoom(player)) return;
+    const key = `${player.matchId}:${player.playerId}`;
     // Replaced by a newer socket (other tab, reconnect): stay online.
     if (this.activeSockets.get(key) !== socket.id) return;
     this.activeSockets.delete(key);
@@ -188,9 +197,9 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
     if (room.hostId !== user.userId && user.role !== Role.ADMIN) {
       return fail('not_host');
     }
-    socket.data.hostPin = room.pin;
-    void socket.join(hostRoom(room.pin));
-    void socket.join(allRoom(room.pin));
+    socket.data.host = { pin: room.pin, matchId: room.matchId };
+    void socket.join(hostRoom(room.matchId));
+    void socket.join(allRoom(room.matchId));
     return { ok: true, state: hostView(room) };
   }
 
@@ -219,10 +228,10 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
     const { playerId } = body(payload);
     if (!isShortString(playerId)) return fail('bad_request');
     return this.hostCommand(socket, { type: 'kick', playerId }, (room) => {
-      const target = playerRoom(room.pin, playerId);
+      const target = playerRoom(room.matchId, playerId);
       this.server.to(target).emit('player:kicked');
       this.server.in(target).disconnectSockets(true);
-      this.activeSockets.delete(`${room.pin}:${playerId}`);
+      this.activeSockets.delete(`${room.matchId}:${playerId}`);
     });
   }
 
@@ -231,9 +240,16 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
     event: LiveEvent,
     onSuccess?: (room: LiveRoom) => void,
   ): LiveAck {
-    const pin = socket.data.hostPin;
-    const room = pin ? this.registry.get(pin) : undefined;
-    if (!room) return fail('not_host');
+    const room = this.boundRoom(socket.data.host);
+    const user = socket.data.user;
+    // Checked on every command, not only at attach (launch A2).
+    if (
+      !room ||
+      !user ||
+      (room.hostId !== user.userId && user.role !== Role.ADMIN)
+    ) {
+      return fail('not_host');
+    }
     const result = this.registry.apply(room.pin, event);
     if (!result) return fail('not_found');
     if (result.error) return fail(result.error);
@@ -356,7 +372,7 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
     @MessageBody() payload: unknown,
   ): LiveAck {
     const player = socket.data.player;
-    if (!player) return fail('not_joined');
+    if (!player || !this.boundRoom(player)) return fail('not_joined');
     const { questionIndex, choice } = body(payload);
     if (!isSmallInt(questionIndex) || !isSmallInt(choice)) {
       return fail('bad_request');
@@ -373,29 +389,35 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
 
   /** One socket per player: a newer one (tab, device) replaces the older. */
   private attachPlayer(socket: LiveSocket, room: LiveRoom, playerId: string) {
-    const key = `${room.pin}:${playerId}`;
+    const key = `${room.matchId}:${playerId}`;
     const previous = this.activeSockets.get(key);
     this.activeSockets.set(key, socket.id);
     if (previous && previous !== socket.id) {
       this.server.to(previous).emit('player:replaced');
       this.server.in(previous).disconnectSockets(true);
     }
-    socket.data.player = { pin: room.pin, playerId };
-    void socket.join(allRoom(room.pin));
-    void socket.join(playerRoom(room.pin, playerId));
+    socket.data.player = { pin: room.pin, matchId: room.matchId, playerId };
+    void socket.join(allRoom(room.matchId));
+    void socket.join(playerRoom(room.matchId, playerId));
+  }
+
+  /** The room a socket was bound to, if it is still that same match. */
+  private boundRoom(binding: RoomBinding | undefined): LiveRoom | undefined {
+    const room = binding ? this.registry.get(binding.pin) : undefined;
+    return room?.matchId === binding?.matchId ? room : undefined;
   }
 
   // ---------- Broadcasting ----------
 
   private broadcast(room: LiveRoom, effects: LiveEffect[]): void {
-    const pin = room.pin;
-    this.server.to(hostRoom(pin)).emit('host:state', hostView(room));
+    const { matchId } = room;
+    this.server.to(hostRoom(matchId)).emit('host:state', hostView(room));
     if (effects.every((e) => e === 'question:progress')) return;
 
     for (const p of activePlayers(room.state)) {
       if (p.online) {
         this.server
-          .to(playerRoom(pin, p.id))
+          .to(playerRoom(matchId, p.id))
           .emit('room:state', playerView(room, p.id));
       }
     }
@@ -403,11 +425,11 @@ export class LiveGateway implements OnGatewayInit, OnGatewayDisconnect {
       void this.results.saveOnce(room, 'ended');
     }
     if (effects.includes('room:closed')) {
-      this.server.to(allRoom(pin)).emit('room:closed');
+      this.server.to(allRoom(matchId)).emit('room:closed');
       // Closed mid-game (idle host): keep what was played.
       void this.results.saveOnce(room, 'aborted');
       for (const key of this.activeSockets.keys()) {
-        if (key.startsWith(`${pin}:`)) this.activeSockets.delete(key);
+        if (key.startsWith(`${matchId}:`)) this.activeSockets.delete(key);
       }
     }
   }

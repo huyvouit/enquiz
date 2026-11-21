@@ -16,6 +16,7 @@ import type { Request, Response } from 'express';
 import { Public } from '../../common/decorators/public.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { Role } from '../../common/enums/role.enum.js';
+import { RateLimit } from '../../common/rate-limit/rate-limit.js';
 import { AUDIO_KEY_PATTERN, AudioStorageService } from './audio-storage.js';
 import {
   IMAGE_TYPES,
@@ -40,6 +41,7 @@ export class UploadsController {
    * other types -> 415, larger than 1 MB -> 413.
    */
   @Roles(Role.TEACHER, Role.ADMIN)
+  @RateLimit('image-upload', 30)
   @Post('images')
   @UseInterceptors(
     FileInterceptor('file', {

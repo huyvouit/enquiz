@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Question } from '../../../questions/schemas/question.schema.js';
 import { Quiz } from '../../../quizzes/schemas/quiz.schema.js';
+import { cleanAnswer } from '../../grading/clean-answer.js';
 import { gradeAnswer } from '../../grading/graders.js';
 import { AnswerFeedback, toAnswerFeedback } from '../../progress.mapper.js';
 import { QuizSession } from '../../schemas/quiz-session.schema.js';
@@ -44,10 +45,13 @@ export class AnswerQuestionHandler implements ICommandHandler<AnswerQuestionComm
       return { ...toAnswerFeedback(existing, question), alreadyAnswered: true };
     }
 
+    // Only a known shape of bounded size is graded and stored (launch A5):
+    // anything else is kept as null, i.e. a wrong answer.
+    const given = cleanAnswer(studentAnswer);
     const answer = {
       questionId: qid,
-      studentAnswer,
-      isCorrect: gradeAnswer(question, studentAnswer),
+      studentAnswer: given,
+      isCorrect: given !== null && gradeAnswer(question, given),
     };
     // Conditional push: if two requests race, only the first answer is kept.
     const res = await this.sessionModel.updateOne(

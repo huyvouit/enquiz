@@ -9,6 +9,7 @@ import type { Role } from '@/shared/api/types'
 import { EmptyState, Spinner } from '@/shared/components'
 import { AppLayout } from './AppLayout'
 import { RootRedirect } from './RootRedirect'
+import { RouteError } from './RouteError'
 
 /**
  * Teacher/admin screens are loaded on demand so the student bundle stays
@@ -55,52 +56,58 @@ function guarded(roles: Role[], page: ReactNode) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/', element: <RootRedirect /> },
-  { path: '/login', element: <GuestOnly><LoginPage /></GuestOnly> },
-  { path: '/register', element: <GuestOnly><RegisterPage /></GuestOnly> },
-  // Exam room (plan 4.2): full screen, outside AppLayout.
-  { path: '/exam/:assignmentId', element: guarded(['student'], <ExamPage />) },
-  // Live quiz (plan 5): public join + play (guests have no account),
-  // and the full-screen projector, all outside AppLayout.
-  { path: '/live', element: <Suspense fallback={<Spinner />}><LiveJoinPage /></Suspense> },
-  { path: '/live/play', element: <Suspense fallback={<Spinner />}><LivePlayPage /></Suspense> },
-  { path: '/teacher/live/:matchId/host', element: guarded(staff, <LiveHostPage />) },
   {
-    element: (
-      <RequireAuth>
-        <AppLayout />
-      </RequireAuth>
-    ),
+    // Any page that crashes shows a friendly error instead of a blank page.
+    errorElement: <RouteError />,
     children: [
-      // Student
-      { path: '/home', element: guarded(['student'], <StudentHomePage />) },
-      { path: '/assignments', element: guarded(['student'], <MyAssignmentsPage />) },
-      { path: '/history', element: guarded(['student'], <HistoryPage />) },
-      // Any role
-      { path: '/leaderboard', element: <LeaderboardPage /> },
-      // Any role (teachers use /play as a preview)
-      { path: '/play/:quizId', element: <PlayPage /> },
-      { path: '/attempts/:attemptId', element: <AttemptPage /> },
-      // Teacher / admin
-      { path: '/teacher', element: guarded(staff, <TeacherDashboardPage />) },
-      { path: '/teacher/classes', element: guarded(staff, <ClassesPage />) },
-      { path: '/teacher/classes/:classId', element: guarded(staff, <ClassWorkspacePage />) },
-      { path: '/teacher/classes/:classId/students/:studentId', element: guarded(staff, <StudentReportPage />) },
-      { path: '/teacher/assignments/:assignmentId', element: guarded(staff, <AssignmentReportPage />) },
-      { path: '/teacher/questions', element: guarded(staff, <QuestionBankPage />) },
-      { path: '/teacher/questions/new', element: guarded(staff, <QuestionEditorPage />) },
-      { path: '/teacher/questions/import', element: guarded(staff, <QuestionImportPage />) },
-      { path: '/teacher/live', element: guarded(staff, <LiveHistoryPage />) },
-      { path: '/teacher/live/new', element: guarded(staff, <LiveSetupPage />) },
-      { path: '/teacher/live/:matchId', element: guarded(staff, <LiveReportPage />) },
-      { path: '/teacher/questions/:id/edit', element: guarded(staff, <QuestionEditorPage />) },
-      { path: '/teacher/quizzes/new', element: guarded(staff, <QuizBuilderPage />) },
-      { path: '/teacher/quizzes/:id/edit', element: guarded(staff, <QuizBuilderPage />) },
-      { path: '/teacher/quizzes/:quizId/results', element: guarded(staff, <QuizResultsPage />) },
-      // Admin
-      { path: '/admin/users', element: guarded(['admin'], <AdminUsersPage />) },
-      { path: '/admin/map', element: guarded(['admin'], <MapOrderPage />) },
-      { path: '*', element: <EmptyState emoji="🧭" title="Không tìm thấy trang này" /> },
+      { path: '/', element: <RootRedirect /> },
+      { path: '/login', element: <GuestOnly><LoginPage /></GuestOnly> },
+      { path: '/register', element: <GuestOnly><RegisterPage /></GuestOnly> },
+      // Exam room (plan 4.2): full screen, outside AppLayout.
+      { path: '/exam/:assignmentId', element: guarded(['student'], <ExamPage />) },
+      // Live quiz (plan 5): public join + play (guests have no account),
+      // and the full-screen projector, all outside AppLayout.
+      { path: '/live', element: <Suspense fallback={<Spinner />}><LiveJoinPage /></Suspense> },
+      { path: '/live/play', element: <Suspense fallback={<Spinner />}><LivePlayPage /></Suspense> },
+      { path: '/teacher/live/:matchId/host', element: guarded(staff, <LiveHostPage />) },
+      {
+        element: (
+          <RequireAuth>
+            <AppLayout />
+          </RequireAuth>
+        ),
+        children: [
+          // Student
+          { path: '/home', element: guarded(['student'], <StudentHomePage />) },
+          { path: '/assignments', element: guarded(['student'], <MyAssignmentsPage />) },
+          { path: '/history', element: guarded(['student'], <HistoryPage />) },
+          // Any role
+          { path: '/leaderboard', element: <LeaderboardPage /> },
+          // Any role (teachers use /play as a preview)
+          { path: '/play/:quizId', element: <PlayPage /> },
+          { path: '/attempts/:attemptId', element: <AttemptPage /> },
+          // Teacher / admin
+          { path: '/teacher', element: guarded(staff, <TeacherDashboardPage />) },
+          { path: '/teacher/classes', element: guarded(staff, <ClassesPage />) },
+          { path: '/teacher/classes/:classId', element: guarded(staff, <ClassWorkspacePage />) },
+          { path: '/teacher/classes/:classId/students/:studentId', element: guarded(staff, <StudentReportPage />) },
+          { path: '/teacher/assignments/:assignmentId', element: guarded(staff, <AssignmentReportPage />) },
+          { path: '/teacher/questions', element: guarded(staff, <QuestionBankPage />) },
+          { path: '/teacher/questions/new', element: guarded(staff, <QuestionEditorPage />) },
+          { path: '/teacher/questions/import', element: guarded(staff, <QuestionImportPage />) },
+          { path: '/teacher/live', element: guarded(staff, <LiveHistoryPage />) },
+          { path: '/teacher/live/new', element: guarded(staff, <LiveSetupPage />) },
+          { path: '/teacher/live/:matchId', element: guarded(staff, <LiveReportPage />) },
+          { path: '/teacher/questions/:id/edit', element: guarded(staff, <QuestionEditorPage />) },
+          { path: '/teacher/quizzes/new', element: guarded(staff, <QuizBuilderPage />) },
+          { path: '/teacher/quizzes/:id/edit', element: guarded(staff, <QuizBuilderPage />) },
+          { path: '/teacher/quizzes/:quizId/results', element: guarded(staff, <QuizResultsPage />) },
+          // Admin
+          { path: '/admin/users', element: guarded(['admin'], <AdminUsersPage />) },
+          { path: '/admin/map', element: guarded(['admin'], <MapOrderPage />) },
+          { path: '*', element: <EmptyState emoji="🧭" title="Không tìm thấy trang này" /> },
+        ],
+      },
     ],
   },
 ])

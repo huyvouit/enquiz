@@ -14,6 +14,7 @@ import {
   ClassAccess,
   ClassAccessQuery,
   StudentClassIdsQuery,
+  TaughtStudentIdsQuery,
   TeachesStudentQuery,
 } from '../impl/class-membership.queries.js';
 
@@ -34,6 +35,20 @@ export class TeachesStudentHandler implements IQueryHandler<TeachesStudentQuery>
       status: ClassStatus.ACTIVE,
     });
     return found !== null;
+  }
+}
+
+@QueryHandler(TaughtStudentIdsQuery)
+export class TaughtStudentIdsHandler implements IQueryHandler<TaughtStudentIdsQuery> {
+  constructor(
+    @InjectModel(ClassRoom.name) private readonly classModel: Model<ClassRoom>,
+  ) {}
+
+  async execute({ teacherId }: TaughtStudentIdsQuery): Promise<string[]> {
+    const ids = await this.classModel.distinct('studentIds', {
+      teacherId: new Types.ObjectId(teacherId),
+    });
+    return ids.map(String);
   }
 }
 

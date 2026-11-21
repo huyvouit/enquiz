@@ -20,6 +20,7 @@ import {
 import {
   ClassAccessHandler,
   StudentClassIdsHandler,
+  TaughtStudentIdsHandler,
   TeachesStudentHandler,
 } from './queries/handlers/class-membership.handlers.js';
 import {
@@ -51,6 +52,7 @@ import { ClassRoom, ClassRoomSchema } from './schemas/class-room.schema.js';
     ListMyClassesHandler,
     GetClassDetailHandler,
     TeachesStudentHandler,
+    TaughtStudentIdsHandler,
     ClassAccessHandler,
     StudentClassIdsHandler,
   ],

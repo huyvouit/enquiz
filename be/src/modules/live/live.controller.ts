@@ -7,6 +7,7 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 import { Role } from '../../common/enums/role.enum.js';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
+import { RateLimit } from '../../common/rate-limit/rate-limit.js';
 import { CreateLiveMatchCommand } from './commands/impl/live.commands.js';
 import {
   CreateLiveMatchDto,
@@ -31,6 +32,7 @@ export class LiveController {
   ) {}
 
   @Roles(Role.TEACHER, Role.ADMIN)
+  @RateLimit('live-create', 10)
   @Post('matches')
   create(@Body() dto: CreateLiveMatchDto, @CurrentUser() user: AuthUser) {
     return this.commandBus.execute(new CreateLiveMatchCommand(dto, user));

@@ -1,5 +1,5 @@
 /**
- * In-memory sliding-window counter (plan 5, L4/L11). One Cloud Run instance
+ * In-memory sliding-window counter (plan 5 L4/L11, launch A3/A4). One Cloud Run instance
  * (D19), so memory is enough; move to Redis with the socket adapter.
  */
 export class SlidingWindowLimiter {

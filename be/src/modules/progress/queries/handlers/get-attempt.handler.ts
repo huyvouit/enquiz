@@ -3,7 +3,7 @@ import { IQueryHandler, QueryBus, QueryHandler } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Role } from '../../../../common/enums/role.enum.js';
-import { TeachesStudentQuery } from '../../../classes/queries/impl/class-membership.queries.js';
+import { TaughtStudentIdsQuery } from '../../../classes/queries/impl/class-membership.queries.js';
 import { Question } from '../../../questions/schemas/question.schema.js';
 import { Quiz } from '../../../quizzes/schemas/quiz.schema.js';
 import { AnswersHiddenUntilQuery } from '../../../assignments/queries/impl/assignment.queries.js';
@@ -34,19 +34,20 @@ export class GetAttemptHandler implements IQueryHandler<GetAttemptQuery> {
     if (!attempt) throw new NotFoundException('Không tìm thấy bài làm');
 
     const quiz = await this.quizModel
-      .findById(attempt.quizId, { title: 1, coverEmoji: 1, createdBy: 1 })
+      .findById(attempt.quizId, { title: 1, coverEmoji: 1 })
       .lean();
 
+    // The student, an admin, or a teacher who has (or had) the student in a
+    // class. Writing the quiz is not enough: a shared quiz is played by other
+    // teachers' classes (launch A1).
     const isOwner = attempt.studentId.toString() === user.userId;
-    const isQuizAuthor = quiz?.createdBy?.toString() === user.userId;
     const allowed =
       isOwner ||
-      isQuizAuthor ||
       user.role === Role.ADMIN ||
       (user.role === Role.TEACHER &&
-        (await this.queryBus.execute(
-          new TeachesStudentQuery(user.userId, attempt.studentId.toString()),
-        )));
+        (
+          await this.queryBus.execute(new TaughtStudentIdsQuery(user.userId))
+        ).includes(attempt.studentId.toString()));
     if (!allowed) {
       throw new NotFoundException('Không tìm thấy bài làm');
     }

@@ -23,6 +23,7 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 import { Role } from '../../common/enums/role.enum.js';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe.js';
 import type { AuthUser } from '../../common/types/auth-user.js';
+import { RateLimit } from '../../common/rate-limit/rate-limit.js';
 import { BackfillAudioCommand, GetAudioStatusQuery } from './audio-backfill.js';
 import { CreateQuestionCommand } from './commands/impl/create-question.command.js';
 import { DeleteQuestionCommand } from './commands/impl/delete-question.command.js';
@@ -69,12 +70,14 @@ export class QuestionsController {
 
   /** POST /questions/audio/backfill — makes the missing audio, one batch per call. */
   @Roles(Role.ADMIN)
+  @RateLimit('audio-backfill', 10)
   @Post('audio/backfill')
   @HttpCode(HttpStatus.OK)
   backfillAudio() {
     return this.commandBus.execute(new BackfillAudioCommand());
   }
 
+  @RateLimit('question-import', 10)
   @Post('import')
   @HttpCode(HttpStatus.OK)
   importCsv(

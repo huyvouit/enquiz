@@ -1,8 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
-import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { IQueryHandler, QueryBus, QueryHandler } from '@nestjs/cqrs';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { Role } from '../../../../common/enums/role.enum.js';
 import { assertCanModify } from '../../../../common/utils/ownership.js';
+import { TaughtStudentIdsQuery } from '../../../classes/queries/impl/class-membership.queries.js';
 import { Quiz } from '../../../quizzes/schemas/quiz.schema.js';
 import { User } from '../../../users/schemas/user.schema.js';
 import { AttemptSummary } from '../../progress.mapper.js';
@@ -18,6 +20,7 @@ export class GetQuizResultsHandler implements IQueryHandler<GetQuizResultsQuery>
     private readonly progressModel: Model<StudentProgress>,
     @InjectModel(Quiz.name) private readonly quizModel: Model<Quiz>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async execute({
@@ -29,8 +32,18 @@ export class GetQuizResultsHandler implements IQueryHandler<GetQuizResultsQuery>
     // Same rule as editing: the author or an admin.
     assertCanModify(user, quiz.createdBy);
 
+    // A shared quiz is played by other teachers' classes too: its author sees
+    // only their own students (children's data, launch A1); admins see all.
+    const filter: Record<string, unknown> = { quizId: quiz._id };
+    if (user.role !== Role.ADMIN) {
+      const taught = await this.queryBus.execute(
+        new TaughtStudentIdsQuery(user.userId),
+      );
+      filter.studentId = { $in: taught.map((id) => new Types.ObjectId(id)) };
+    }
+
     const attempts = await this.progressModel
-      .find({ quizId: quiz._id }, { details: 0 })
+      .find(filter, { details: 0 })
       .sort({ completedAt: -1 })
       .limit(RESULTS_LIMIT)
       .lean();

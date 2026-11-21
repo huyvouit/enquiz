@@ -17,7 +17,9 @@ Quy tắc chung (cấu trúc feature-first, quy tắc import, style), cách ch�
 
 | Biến | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `/api/v1` | URL API. Dev giữ mặc định (qua proxy); production đặt URL đầy đủ của backend |
+| `VITE_API_BASE_URL` | `/api/v1` | URL API. Dev giữ mặc định (qua proxy); production cũng giữ `/api/v1` (Firebase Hosting chuyển sang Cloud Run) |
+| `VITE_LIVE_URL` | rỗng | Socket Đấu trường. Dev để rỗng (qua proxy); production là URL Cloud Run (D19) |
+| `VITE_SITE_URL` | rỗng | Chỉ dùng lúc build: địa chỉ site cho link Open Graph và `sitemap.xml` (`seo.plugin.ts`). Để rỗng khi dev |
 
 ## Cấu trúc
 

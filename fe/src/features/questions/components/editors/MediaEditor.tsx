@@ -1,11 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { errorMessage } from '@/shared/api/http'
 import { Button, Field, Input } from '@/shared/components'
+import { shrinkImage } from '@/shared/lib/shrink-image'
 import { speak, voicesReady } from '@/shared/speech'
 import { questionsApi } from '../../api/questions.api'
 import { IMAGE_TYPES, QUESTION_LIMITS } from '../../types'
 
-/** Image: upload (PNG/JPG/WebP ≤ 1 MB) or paste an http(s) link. */
+/** A photo straight from a phone is fine: it is shrunk before upload. */
+const MAX_ORIGINAL_BYTES = 15 * 1024 * 1024
+
+/**
+ * Image: upload (PNG/JPG/WebP, shrunk in the browser to ≤ 1280 px WebP, so
+ * the server's 1 MB limit is rarely reached) or paste an http(s) link.
+ */
 export function ImageField({ value, onChange }: { value: string; onChange: (url: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -17,13 +24,18 @@ export function ImageField({ value, onChange }: { value: string; onChange: (url:
       setError('Chỉ nhận ảnh PNG, JPG hoặc WebP')
       return
     }
-    if (file.size > QUESTION_LIMITS.maxImageBytes) {
-      setError(`Ảnh quá lớn (${(file.size / 1024 / 1024).toFixed(1)} MB). Tối đa 1 MB.`)
+    if (file.size > MAX_ORIGINAL_BYTES) {
+      setError(`Ảnh quá lớn (${(file.size / 1024 / 1024).toFixed(1)} MB). Chọn ảnh dưới 15 MB nhé.`)
       return
     }
     setUploading(true)
     try {
-      const res = await questionsApi.uploadImage(file)
+      const small = await shrinkImage(file)
+      if (small.size > QUESTION_LIMITS.maxImageBytes) {
+        setError(`Ảnh vẫn quá lớn sau khi thu nhỏ (${(small.size / 1024 / 1024).toFixed(1)} MB). Tối đa 1 MB.`)
+        return
+      }
+      const res = await questionsApi.uploadImage(small)
       onChange(res.url)
     } catch (err) {
       setError(errorMessage(err))
@@ -38,7 +50,7 @@ export function ImageField({ value, onChange }: { value: string; onChange: (url:
       <div className="flex flex-wrap items-center gap-3">
         {value ? (
           <div className="relative">
-            <img src={value} alt="Ảnh câu hỏi" className="h-24 w-auto max-w-40 rounded-xl border-2 border-line object-contain" />
+            <img src={value} alt="Ảnh câu hỏi" decoding="async" className="h-24 w-auto max-w-40 rounded-xl border-2 border-line object-contain" />
             <button
               type="button"
               aria-label="Bỏ ảnh"
@@ -71,7 +83,7 @@ export function ImageField({ value, onChange }: { value: string; onChange: (url:
         onChange={(e) => onChange(e.target.value)}
         aria-label="Link ảnh"
       />
-      <span className="text-xs text-ink-soft">PNG, JPG hoặc WebP, tối đa 1 MB.</span>
+      <span className="text-xs text-ink-soft">PNG, JPG hoặc WebP. Ảnh lớn được tự thu nhỏ trước khi tải lên.</span>
       {error ? <span className="text-sm font-bold text-coral">{error}</span> : null}
     </div>
   )

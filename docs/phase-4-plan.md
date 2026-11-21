@@ -332,7 +332,8 @@ student_progress           mode ('classic' mặc định), isAutoSubmit
 - Fine-grained token GitHub dùng cho `gh` phải có các quyền sau trên repo: **Contents**, **Workflows** (để push `.github/workflows/`), và **Pull requests** (để `gh pr create`), tất cả ở mức Read and write.
 
 **Còn lại để đóng 4.0**
-- Dựng hạ tầng theo `deploy.md` và chạy hết mục 6 (kiểm tra sau deploy). Trong đó có kết quả thử `@nestjs/storage` để chốt D18.
+- Dựng hạ tầng theo `deploy.md` và chạy hết mục 6 (kiểm tra sau deploy). D18 đã chốt (`GcsDisk`, PR #5).
+- Kiểm tra trước khi launch (4.0b): [launch-checklist.md](launch-checklist.md). Phần code A1–A6, B1–B4 đã làm; phần C làm cùng deploy.
 - Sentry và backup Atlas.
 - Đồng ý của phụ huynh trước khi mở cho trường thật.
 
